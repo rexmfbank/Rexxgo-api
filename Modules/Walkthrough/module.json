@@ -5,7 +5,7 @@
     "keywords": [],
     "priority": 0,
     "providers": [
-        "Modules\\Walkthrough\\App\\Providers\\WalkthroughServiceProvider"
+        "Modules\\Walkthrough\\app\\Providers\\WalkthroughServiceProvider"
     ],
     "files": []
 }
