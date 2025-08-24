@@ -1,0 +1,11 @@
+{
+    "name": "Walkthrough",
+    "alias": "walkthrough",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\Walkthrough\\App\\Providers\\WalkthroughServiceProvider"
+    ],
+    "files": []
+}

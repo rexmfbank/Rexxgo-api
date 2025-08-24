@@ -1,0 +1,9 @@
+{
+    "name": "Auth",
+    "alias": "auth",
+    "providers": [
+        "Modules\\Auth\\App\\Providers\\AuthServiceProvider",
+        "Modules\\Auth\\App\\Providers\\RouteServiceProvider",
+        "Modules\\Auth\\App\\Providers\\ModuleServiceProvider"
+    ]
+}

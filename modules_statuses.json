@@ -1,0 +1,8 @@
+{
+    "Walkthrough": true,
+    "Auth": true,
+    "Wallet": true,
+    "Notification": true,
+    "Profile": true,
+    "Treasury": true
+}
