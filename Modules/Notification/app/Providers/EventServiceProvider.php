@@ -1,6 +1,6 @@
 <?php
 
-namespace Modules\Notification\App\Providers;
+namespace Modules\Notification\app\Providers;
 
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
 
