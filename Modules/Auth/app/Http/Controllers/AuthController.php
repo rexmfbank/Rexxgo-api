@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Crypt;
 use \App\Models\Company;
 use \App\Models\Borrower;
-use \Modules\Auth\App\Models\PasswordResetToken;
+use \Modules\Auth\app\Models\PasswordResetToken;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 
