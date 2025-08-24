@@ -1,6 +1,6 @@
 <?php
 
-namespace Modules\Wallet\App\Providers;
+namespace Modules\Wallet\app\Providers;
 
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;

@@ -5,7 +5,7 @@
     "keywords": [],
     "priority": 0,
     "providers": [
-        "Modules\\Treasury\\App\\Providers\\TreasuryServiceProvider"
+        "Modules\\Treasury\\app\\Providers\\TreasuryServiceProvider"
     ],
     "files": []
 }

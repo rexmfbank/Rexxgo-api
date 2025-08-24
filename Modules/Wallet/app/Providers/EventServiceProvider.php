@@ -1,6 +1,6 @@
 <?php
 
-namespace Modules\Wallet\App\Providers;
+namespace Modules\Wallet\app\Providers;
 
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
 
