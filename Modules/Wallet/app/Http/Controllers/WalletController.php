@@ -21,7 +21,7 @@ class WalletController extends Controller
         $baseUrl = env('BAASCORE'). "/baas/api/v1/services/virtual-account/$accountNumber/wallet-balance";
         $response = $this->getCurl($baseUrl);
         $response = json_decode($response, true);
-        if($response['success'] == true){
+        if($response && $response['success'] == true){
             return $this->success($response['data'], 'Wallet balance retrieved successfully', 200);
         }else{
             return $this->error($response['message'] ?? 'Failed to retrieve wallet balance', 400);
@@ -95,7 +95,7 @@ class WalletController extends Controller
         //     "timestamp" => "2025-08-25 02:02:47"
         // ];
 
-        if($response['success'] == true){
+        if($response && $response['success'] == true){
 
             //create a savings account and update account number
             Savings::updateOrCreate([
