@@ -3,7 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use App\Scopes\CompanyScope;
+use App\Models\Scopes\CompanyScope;
 
 class Event extends Model
 {

@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use App\Scopes\CompanyScope;
+use App\Models\Scopes\CompanyScope;
 use App\Traits\BelongsToCompanyAndBranch;
 use Illuminate\Database\Eloquent\SoftDeletes;
 

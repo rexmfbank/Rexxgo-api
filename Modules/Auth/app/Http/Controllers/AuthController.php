@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Crypt;
 use \App\Models\Company;
 use \App\Models\Borrower;
+use App\Models\WebhookLog;
 use \Modules\Auth\app\Models\PasswordResetToken;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -129,6 +130,9 @@ class AuthController extends Controller
                 'middle_name'   => $payload['middle_name'] ?? null,
                 'last_name'     => $payload['last_name'],
                 'unique_number' => $payload['phone'],
+                'phone_verified_at' => now(), // phone is verified after registration
+                'kyc_status'        => 'kyc_pending', // pending until kyc is done
+                'status'        => 'active', // pending until passcode is set
             ]);
 
             $data = [
@@ -220,16 +224,16 @@ class AuthController extends Controller
 
     public function facialId(Request $request): JsonResponse
     {
-        $companyId = (int) $request->attributes->get('company_id');
+        $companyId = (int) $request->headers->get('X-Company-ID');
 
         $request->validate([
-            'phone'            => 'required|string|max:20',
-            'verification_id'  => 'required|string|max:100',
+            'email'            => 'required|string|max:50',
+            'verification_id'  => 'required|string|max:50',
         ]);
 
         $borrower = Borrower::query()
             ->where('company_id', $companyId)
-            ->where('phone', $request->input('phone'))
+            ->where('email', $request->input('email'))
             ->first();
 
         if (!$borrower) {
@@ -237,7 +241,7 @@ class AuthController extends Controller
         }
 
         if (!$borrower->phone_verified_at) {
-            return $this->error('Phone must be verified before facial ID.', 400);
+            return $this->error('Email must be verified before facial ID.', 400);
         }
 
         $borrower->facial_verification_id = $request->input('verification_id');
@@ -257,9 +261,9 @@ class AuthController extends Controller
 
         if ($webhookData['summary']['bvn_check']['status'] == 'EXACT_MATCH') {
             $borrower->kyc_status = 'kyc_verified';
-            $borrower->first_name = $webhookData['bvn']['firstname'] ?? 'Anonymous';
-            $borrower->last_name = $webhookData['bvn']['lastname'] ?? 'Anonymous';
-            $borrower->middle_name = $webhookData['bvn']['middlename'] ?? 'Anonymous';
+            // $borrower->first_name = $webhookData['bvn']['firstname'] ?? 'Anonymous';
+            // $borrower->last_name = $webhookData['bvn']['lastname'] ?? 'Anonymous';
+            $borrower->middle_name = $webhookData['bvn']['middlename'] ?? $borrower->middle_name;
             $borrower->gender = $webhookData['bvn']['gender'];
             $borrower->dob = Carbon::createFromFormat('d-m-Y', $webhookData['bvn']['birthdate'])->toDateString() ?? null;
             $borrower->photo = $webhookData['metadata']['imageUrl'] ?? null;
@@ -292,6 +296,10 @@ class AuthController extends Controller
     }
 
 
+    public function loginView()
+    {
+        return $this->error('Please Login to access this resource', 'Login Required', 401);
+    }
 
     public function setPasscode(Request $request)
     {
