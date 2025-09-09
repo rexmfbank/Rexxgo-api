@@ -24,6 +24,13 @@ class Handler extends ExceptionHandler
         
         if ($request->wantsJson() || ($request->is('api/*'))) {
 
+            if ($exception instanceof \Illuminate\Database\QueryException) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Database error. Please try again later.',
+                ], 500);
+            }
+            
             if ($exception instanceof ValidationException) {
                 return response()->json([
                     'success' => false,
