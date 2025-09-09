@@ -305,8 +305,8 @@ class AuthController extends Controller
     {
         $request->validate([
             'email' => 'required|string|exists:borrowers,email',
-            'passcode' => 'required|digits:4', // uses pin_confirmation field
-            'confirm_passcode' => 'required|digits:4|same:passcode',
+            'passcode' => 'required|digits:6', // uses pin_confirmation field
+            'confirm_passcode' => 'required|digits:6|same:passcode',
         ]);
 
         $borrower = Borrower::where('email', $request->email)->first();
