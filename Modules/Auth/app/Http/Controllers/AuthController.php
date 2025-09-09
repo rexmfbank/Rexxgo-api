@@ -454,6 +454,7 @@ class AuthController extends Controller
             'access_token' => $token,
             'token_type'   => 'bearer',
             'expires_in'   => config('jwt.ttl') * 60, // seconds
+            'user'=> Auth::guard('borrower')->user()
         ];
 
         return $this->success($data, $message);
