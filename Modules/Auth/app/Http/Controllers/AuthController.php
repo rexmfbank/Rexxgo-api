@@ -402,7 +402,23 @@ class AuthController extends Controller
         return $this->success($data, 'PIN set successfully. Registration complete.');
     }
 
+    public function getEmail(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email|exists:borrowers,email',
+        ]);
 
+        $borrower = \App\Models\Borrower::where('email', $request->email)->first();
+
+        if (!$borrower) {
+            return $this->error('Borrower not found', 404);
+        }
+
+        return $this->success([
+            'first_name' => $borrower->first_name,
+            'last_name' => $borrower->last_name,
+        ], 'Borrower details retrieved successfully', 200);
+    }
 
 
     ///****************************** */

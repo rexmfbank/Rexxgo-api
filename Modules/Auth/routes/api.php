@@ -22,7 +22,7 @@ Route::prefix('auth')
         Route::get('login', [AuthController::class, 'loginView'])->name('login');
         Route::get('logout', [AuthController::class, 'logout']);
         Route::get('refresh', [AuthController::class, 'refresh']);
-
+        Route::post('/get-email', [AuthController::class, 'getEmail']);
 });
 
 //must be logged in to access these routes
