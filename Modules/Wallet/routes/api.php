@@ -3,15 +3,33 @@
 use Illuminate\Support\Facades\Route;
 use Modules\Wallet\app\Http\Controllers\WalletController;
 
-Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
-    Route::apiResource('wallets', WalletController::class)->names('wallet');
-});
+/*
+|--------------------------------------------------------------------------
+| Wallet API Routes
+|--------------------------------------------------------------------------
+|
+| These routes are protected by the borrower authentication guard.
+| They provide access to wallet functionality for authenticated users.
+|
+*/
 
-
-
-Route::prefix('wallet')
-    ->middleware(['auth:borrower','throttle:10,1'])
-    ->group(function () {
-        Route::get('create-ngn-wallet', [WalletController::class, 'createNairaWallet']);
-        Route::get('getBalance/{accountno}', [WalletController::class, 'getBalance']);
+Route::middleware(['auth:borrower', 'throttle:10,1'])->group(function () {
+    
+    /*
+    |--------------------------------------------------------------------------
+    | Wallet Management Routes
+    |--------------------------------------------------------------------------
+    */
+    Route::prefix('wallet')->group(function () {
+        Route::get('/{accountNumber}/balance', [WalletController::class, 'getBalance'])->name('wallet.balance');
+        Route::post('/ngn', [WalletController::class, 'createNairaWallet'])->name('wallet.create-ngn');
     });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Alternative Routes (without prefix)
+    |--------------------------------------------------------------------------
+    */
+    Route::get('/wallet/{accountNumber}/balance', [WalletController::class, 'getBalance'])->name('wallet.get-balance');
+    Route::post('/wallet/ngn', [WalletController::class, 'createNairaWallet'])->name('wallet.create-ngn-alt');
+});

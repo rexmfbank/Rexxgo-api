@@ -1,8 +1,22 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Modules\Profile\Http\Controllers\ProfileController;
+use Modules\Profile\app\Http\Controllers\ProfileController;
 
-Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
-    Route::apiResource('profiles', ProfileController::class)->names('profile');
+/*
+|--------------------------------------------------------------------------
+| Profile API Routes
+|--------------------------------------------------------------------------
+|
+| These routes are protected by the borrower authentication guard.
+| They provide access to profile management functionality for authenticated users.
+|
+*/
+
+Route::middleware(['auth:borrower', 'throttle:10,1'])->group(function () {
+    Route::prefix('profile')->group(function () {
+        Route::get('/', [ProfileController::class, 'index'])->name('profile.index');
+        Route::put('/', [ProfileController::class, 'update'])->name('profile.update');
+        Route::get('/kyc-status', [ProfileController::class, 'getKycStatus'])->name('profile.kyc-status');
+    });
 });

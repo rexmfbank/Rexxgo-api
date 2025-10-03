@@ -12,6 +12,7 @@ use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\UnauthorizedHttpException;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+use Illuminate\Auth\AuthenticationException;
 
 class JsonExceptionMiddleware
 {
@@ -30,6 +31,11 @@ class JsonExceptionMiddleware
                 'success' => false,
                 'message' => 'Resource not found',
             ], 404);
+        } catch (AuthenticationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthenticated.',
+            ], 401);
         } catch (UnauthorizedHttpException $e) {
             return response()->json([
                 'success' => false,

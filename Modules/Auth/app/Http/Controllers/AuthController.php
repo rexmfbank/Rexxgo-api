@@ -14,9 +14,22 @@ use App\Models\WebhookLog;
 use \Modules\Auth\app\Models\PasswordResetToken;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Modules\Wallet\app\Http\Controllers\WalletController;
 
 class AuthController extends Controller
 {
+    /**
+     * @OA\Get(
+     *   path="/api/auth/company",
+     *   tags={"Auth"},
+     *   summary="Get company info",
+     *   @OA\Parameter(name="X-Company-ID", in="header", required=true, @OA\Schema(type="integer")),
+     *   @OA\Response(response=200, description="Success"),
+     *   @OA\Response(response=400, description="Bad Request"),
+     *   @OA\Response(response=404, description="Not Found")
+     * )
+     */
     public function getCompany(Request $request): JsonResponse
     {
         try {
@@ -41,9 +54,16 @@ class AuthController extends Controller
         }
     }
 
+    /**
+     * @OA\Get(
+     *   path="/api/auth/countries",
+     *   tags={"Auth"},
+     *   summary="List supported countries",
+     *   @OA\Response(response=200, description="Success")
+     * )
+     */
     public function getCountries(): JsonResponse
     {
-       
         $countries = [
             ["code" => "NG", "name" => "Nigeria"],
             ["code" => "US", "name" => "United States"],
@@ -58,6 +78,29 @@ class AuthController extends Controller
         return $this->success($countries, 'Countries retrieved successfully');
     }
 
+    /**
+     * @OA\Post(
+     *   path="/api/auth/register",
+     *   tags={"Auth"},
+     *   summary="Register a borrower",
+     *   @OA\RequestBody(
+     *       required=true,
+     *       @OA\JsonContent(
+     *           required={"customer_type","phone","email","first_name","last_name","country"},
+     *           @OA\Property(property="customer_type", type="string", example="Individual"),
+     *           @OA\Property(property="phone", type="string", example="08012345678"),
+     *           @OA\Property(property="email", type="string", example="john@example.com"),
+     *           @OA\Property(property="first_name", type="string", example="John"),
+     *           @OA\Property(property="last_name", type="string", example="Doe"),
+     *           @OA\Property(property="country", type="string", example="USA"),
+     *           @OA\Property(property="middle_name", type="string", example="Q")
+     *       )
+     *   ),
+     *   @OA\Response(response=201, description="Created"),
+     *   @OA\Response(response=409, description="Conflict"),
+     *   @OA\Response(response=422, description="Unprocessable Entity")
+     * )
+     */
     public function register(Request $request): JsonResponse
     {
         $companyId = (int) $request->headers->get('X-Company-ID');
@@ -71,6 +114,7 @@ class AuthController extends Controller
             'email'         => 'required|email|max:50',
             'first_name'    => 'required|string|max:50',
             'last_name'     => 'required|string|max:50',
+            'country' => 'required|string|in:NG,USA',
             'middle_name'   => 'nullable|string|max:50',
         ]);
 
@@ -101,6 +145,7 @@ class AuthController extends Controller
                 'password'      => Hash::make($request->input('password')),
                 'first_name'    => $request->string('first_name'),
                 'last_name'     => $request->string('last_name'),
+                'country'       => $request->string('country'),
                 'middle_name'   => $request->string('middle_name') ?? null,
             ];
 
@@ -134,7 +179,18 @@ class AuthController extends Controller
                 'kyc_status'        => 'kyc_pending', // pending until kyc is done
                 'status'        => 'active', // pending until passcode is set
             ]);
-
+            
+            // Create savings accounts for NGN, USD, USDC
+            $walletController = new WalletController();
+            $savingsResult = $walletController->createUserWallets($borrower->id);
+            
+            // Log the result
+            if ($savingsResult['success']) {
+                Log::info("Created " . count($savingsResult['accounts']) . " savings accounts for borrower ID: {$borrower->id}");
+            } else {
+                Log::error("Failed to create savings accounts for borrower ID: {$borrower->id}. Error: " . $savingsResult['message']);
+            }
+            
             $data = [
                 'borrower_id'   => Crypt::encryptString($borrower->id),
                 'phone'         => $borrower->phone,
@@ -150,6 +206,23 @@ class AuthController extends Controller
         });
     }
 
+    /**
+     * @OA\Post(
+     *   path="/api/auth/otp/send",
+     *   tags={"Auth"},
+     *   summary="Send OTP to email",
+     *   @OA\RequestBody(
+     *     required=true,
+     *     @OA\JsonContent(
+     *       required={"email"},
+     *       @OA\Property(property="email", type="string", format="email", example="john@example.com")
+     *     )
+     *   ),
+     *   @OA\Response(response=200, description="OTP sent"),
+     *   @OA\Response(response=404, description="Not Found"),
+     *   @OA\Response(response=422, description="Validation error")
+     * )
+     */
     public function sendOtp(Request $request): JsonResponse
     {
         $companyId = (int) $request->attributes->get('company_id');
@@ -191,10 +264,25 @@ class AuthController extends Controller
         ], 'OTP sent successfully.');
     }
 
+    /**
+     * @OA\Post(
+     *   path="/api/auth/otp/verify",
+     *   tags={"Auth"},
+     *   summary="Verify OTP",
+     *   @OA\RequestBody(
+     *     required=true,
+     *     @OA\JsonContent(
+     *       required={"email","otp"},
+     *       @OA\Property(property="email", type="string", format="email"),
+     *       @OA\Property(property="otp", type="string", example="123456")
+     *     )
+     *   ),
+     *   @OA\Response(response=200, description="Verified"),
+     *   @OA\Response(response=422, description="Invalid or expired OTP")
+     * )
+     */
     public function verifyOtp(Request $request): JsonResponse
     {
-        
-        
         $request->validate([
             'email' => 'required|string|max:50',
             'otp'   => 'required|digits:6',
@@ -222,6 +310,24 @@ class AuthController extends Controller
     }
 
 
+    /**
+     * @OA\Post(
+     *   path="/api/auth/facial-id",
+     *   tags={"Auth"},
+     *   summary="Submit facial verification id",
+     *   @OA\RequestBody(
+     *     required=true,
+     *     @OA\JsonContent(
+     *       required={"email","verification_id"},
+     *       @OA\Property(property="email", type="string", format="email"),
+     *       @OA\Property(property="verification_id", type="string")
+     *     )
+     *   ),
+     *   @OA\Response(response=200, description="KYC status returned"),
+     *   @OA\Response(response=400, description="Precondition failed"),
+     *   @OA\Response(response=404, description="Not found")
+     * )
+     */
     public function facialId(Request $request): JsonResponse
     {
         $companyId = (int) $request->headers->get('X-Company-ID');
@@ -301,6 +407,25 @@ class AuthController extends Controller
         return $this->error('Please Login to access this resource', 'Login Required', 401);
     }
 
+    /**
+     * @OA\Post(
+     *   path="/api/auth/setpasscode",
+     *   tags={"Auth"},
+     *   summary="Set passcode",
+     *   @OA\RequestBody(
+     *     required=true,
+     *     @OA\JsonContent(
+     *       required={"email","passcode","confirm_passcode"},
+     *       @OA\Property(property="email", type="string", format="email"),
+     *       @OA\Property(property="passcode", type="string", example="123456"),
+     *       @OA\Property(property="confirm_passcode", type="string", example="123456")
+     *     )
+     *   ),
+     *   @OA\Response(response=200, description="Passcode set"),
+     *   @OA\Response(response=409, description="Already set"),
+     *   @OA\Response(response=404, description="Not found")
+     * )
+     */
     public function setPasscode(Request $request)
     {
         $request->validate([
@@ -345,6 +470,23 @@ class AuthController extends Controller
     }
 
 
+    /**
+     * @OA\Post(
+     *   path="/api/auth/biometrics",
+     *   tags={"Auth"},
+     *   summary="Enable/disable biometrics",
+     *   @OA\RequestBody(
+     *     required=true,
+     *     @OA\JsonContent(
+     *       required={"email","biometrics"},
+     *       @OA\Property(property="email", type="string", format="email"),
+     *       @OA\Property(property="biometrics", type="boolean", example=true)
+     *     )
+     *   ),
+     *   @OA\Response(response=200, description="Updated"),
+     *   @OA\Response(response=404, description="Not found")
+     * )
+     */
     public function setBiometrics(Request $request)
     {
         $request->validate([
@@ -365,12 +507,31 @@ class AuthController extends Controller
             'email'       => $borrower->email,
             'biometrics' => $borrower->biometrics,
         ];
-
+        //here //
         return $this->success($data, 'Biometrics updated successfully!');
     }
 
 
 
+    /**
+     * @OA\Post(
+     *   path="/api/auth/pin",
+     *   tags={"Auth"},
+     *   summary="Set transaction PIN",
+     *   @OA\RequestBody(
+     *     required=true,
+     *     @OA\JsonContent(
+     *       required={"email","pin","pin_confirmation"},
+     *       @OA\Property(property="email", type="string", format="email"),
+     *       @OA\Property(property="pin", type="string", example="1234"),
+     *       @OA\Property(property="pin_confirmation", type="string", example="1234")
+     *     )
+     *   ),
+     *   @OA\Response(response=200, description="PIN set"),
+     *   @OA\Response(response=409, description="Already set"),
+     *   @OA\Response(response=404, description="Not found")
+     * )
+     */
     public function setPin(Request $request)
     {
         $request->validate([
@@ -402,6 +563,16 @@ class AuthController extends Controller
         return $this->success($data, 'PIN set successfully. Registration complete.');
     }
 
+    /**
+     * @OA\Get(
+     *   path="/api/auth/email",
+     *   tags={"Auth"},
+     *   summary="Get borrower name by email",
+     *   @OA\Parameter(name="email", in="query", required=true, @OA\Schema(type="string", format="email")),
+     *   @OA\Response(response=200, description="Success"),
+     *   @OA\Response(response=404, description="Not found")
+     * )
+     */
     public function getEmail(Request $request)
     {
         $request->validate([
@@ -423,8 +594,23 @@ class AuthController extends Controller
 
     ///****************************** */
 
-
-
+    /**
+     * @OA\Post(
+     *   path="/api/auth/login",
+     *   tags={"Auth"},
+     *   summary="Login",
+     *   @OA\RequestBody(
+     *     required=true,
+     *     @OA\JsonContent(
+     *       required={"email","password"},
+     *       @OA\Property(property="email", type="string", example="john@example.com"),
+     *       @OA\Property(property="password", type="string", example="secret")
+     *     )
+     *   ),
+     *   @OA\Response(response=200, description="Success"),
+     *   @OA\Response(response=401, description="Unauthorized")
+     * )
+     */
     public function login(Request $request)
     {
         //validate email and password
@@ -443,6 +629,15 @@ class AuthController extends Controller
         return $this->respondWithToken($token, 'Login successful');
     }
 
+    /**
+     * @OA\Post(
+     *   path="/api/auth/logout",
+     *   tags={"Auth"},
+     *   summary="Logout",
+     *   security={{"bearerAuth":{}}},
+     *   @OA\Response(response=200, description="Logged out")
+     * )
+     */
     public function logout()
     {
         Auth::guard('borrower')->logout();
@@ -450,6 +645,16 @@ class AuthController extends Controller
     }
     /**
      * Refresh token
+     */
+    /**
+     * @OA\Post(
+     *   path="/api/auth/refresh",
+     *   tags={"Auth"},
+     *   summary="Refresh token",
+     *   security={{"bearerAuth":{}}},
+     *   @OA\Response(response=200, description="Token refreshed"),
+     *   @OA\Response(response=401, description="Unauthorized")
+     * )
      */
     public function refresh()
     {
@@ -477,6 +682,25 @@ class AuthController extends Controller
     }
 
 
+    /**
+     * @OA\Post(
+     *   path="/api/auth/passcode/reset",
+     *   tags={"Auth"},
+     *   summary="Reset passcode with OTP",
+     *   @OA\RequestBody(
+     *     required=true,
+     *     @OA\JsonContent(
+     *       required={"email","otp","passcode","passcode_confirmation"},
+     *       @OA\Property(property="email", type="string", format="email"),
+     *       @OA\Property(property="otp", type="string", example="123456"),
+     *       @OA\Property(property="passcode", type="string"),
+     *       @OA\Property(property="passcode_confirmation", type="string")
+     *     )
+     *   ),
+     *   @OA\Response(response=200, description="Reset"),
+     *   @OA\Response(response=400, description="Invalid OTP")
+     * )
+     */
     public function resetPasscode(Request $request)
     {
         $request->validate([
@@ -500,6 +724,25 @@ class AuthController extends Controller
     }
 
 
+    /**
+     * @OA\Post(
+     *   path="/api/auth/pin/reset",
+     *   tags={"Auth"},
+     *   summary="Reset PIN with OTP",
+     *   @OA\RequestBody(
+     *     required=true,
+     *     @OA\JsonContent(
+     *       required={"email","otp","pin","pin_confirmation"},
+     *       @OA\Property(property="email", type="string", format="email"),
+     *       @OA\Property(property="otp", type="string", example="123456"),
+     *       @OA\Property(property="pin", type="string"),
+     *       @OA\Property(property="pin_confirmation", type="string")
+     *     )
+     *   ),
+     *   @OA\Response(response=200, description="Reset"),
+     *   @OA\Response(response=400, description="Invalid or expired OTP")
+     * )
+     */
     public function resetPin(Request $request)
     {
         $request->validate([
@@ -529,6 +772,22 @@ class AuthController extends Controller
 
 
 
+    /**
+     * @OA\Post(
+     *   path="/api/auth/otp/reset/send",
+     *   tags={"Auth"},
+     *   summary="Send OTP for reset",
+     *   @OA\RequestBody(
+     *     required=true,
+     *     @OA\JsonContent(
+     *       required={"email"},
+     *       @OA\Property(property="email", type="string", format="email")
+     *     )
+     *   ),
+     *   @OA\Response(response=200, description="OTP sent"),
+     *   @OA\Response(response=404, description="Not found")
+     * )
+     */
     public function sendResetOtp(Request $request)
     {
         $request->validate([

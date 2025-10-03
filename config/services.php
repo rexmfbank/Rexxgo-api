@@ -35,4 +35,14 @@ return [
         ],
     ],
 
+    'bridge' => [
+        'api_key' => env('BRIDGE_API_KEY'),
+        'base_url' => env('BRIDGE_BASE_URL', 'https://api.bridge.xyz'),
+    ],
+
+    'verifyme' => [
+        'api_key' => env('VERIFYME_API_KEY'),
+        'base_url' => env('VERIFYME_BASE_URL', 'https://vapi.verifyme.ng/v1'),
+    ],
+
 ];

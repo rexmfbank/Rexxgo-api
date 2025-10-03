@@ -42,6 +42,7 @@ class Borrower extends Authenticatable implements JWTSubject
         'city',
         'state',
         'zipcode',
+        'country',
         'working_status',
         'credit_score',
         'photo',
@@ -53,6 +54,7 @@ class Borrower extends Authenticatable implements JWTSubject
         'password',          // hashed
         'status',            // e.g. 'pending_otp','active','blocked'
         'phone_verified_at',
+        'kyc_status',        // kyc_pending, kyc_verified, kyc_failed
 
         'loan_officer_id',
         'landline',

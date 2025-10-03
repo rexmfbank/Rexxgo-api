@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class ChartOfAccount extends Model
 {
     use HasFactory;
-    use BelongsToCompanyAndBranch; //ensure you cannot delete without the owner
+    // use BelongsToCompanyAndBranch; //ensure you cannot delete without the owner
     use SoftDeletes;
 
     protected $table = 'chart_of_accounts';

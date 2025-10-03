@@ -7,6 +7,7 @@ use Throwable;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Symfony\Component\HttpKernel\Exception\HttpException;
+use Illuminate\Auth\AuthenticationException;
 
 class Handler extends ExceptionHandler
 {
@@ -23,6 +24,13 @@ class Handler extends ExceptionHandler
     {
         
         if ($request->wantsJson() || ($request->is('api/*'))) {
+
+            if ($exception instanceof AuthenticationException) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthenticated.',
+                ], 401);
+            }
 
             if ($exception instanceof \Illuminate\Database\QueryException) {
                 return response()->json([

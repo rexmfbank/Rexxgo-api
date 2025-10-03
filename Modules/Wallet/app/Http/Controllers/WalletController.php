@@ -5,8 +5,10 @@ namespace Modules\Wallet\app\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\Borrower;
 use App\Models\Savings;
+use App\Models\SavingsProduct;
 use Illuminate\Http\Request;
 use App\Traits\ApiResponse;
+use Illuminate\Support\Facades\Log;
 
 class WalletController extends Controller
 {
@@ -15,9 +17,21 @@ class WalletController extends Controller
     /**
      * Display a listing of the resource.
      */
+    /**
+     * @OA\Get(
+     *   path="/api/wallets/{accountNumber}/balance",
+     *   tags={"Wallet"},
+     *   summary="Get wallet balance",
+     *   security={{"bearerAuth":{}}},
+     *   @OA\Parameter(name="accountNumber", in="path", required=true, @OA\Schema(type="string")),
+     *   @OA\Response(response=200, description="Success"),
+     *   @OA\Response(response=400, description="Bad Request"),
+     *   @OA\Response(response=401, description="Unauthorized")
+     * )
+     */
+  
     public function getBalance($accountNumber)
     {
-      
         $baseUrl = env('BAASCORE'). "/baas/api/v1/services/virtual-account/$accountNumber/wallet-balance";
         $response = $this->getCurl($baseUrl);
         $response = json_decode($response, true);
@@ -33,6 +47,17 @@ class WalletController extends Controller
      */
     public function createNairaWallet(Request $request)
     {
+        /**
+         * @OA\Post(
+         *   path="/api/wallets/ngn",
+         *   tags={"Wallet"},
+         *   summary="Create NGN wallet",
+         *   security={{"bearerAuth":{}}},
+         *   @OA\Response(response=200, description="Created"),
+         *   @OA\Response(response=400, description="Bad Request"),
+         *   @OA\Response(response=401, description="Unauthorized")
+         * )
+         */
 
         $headers = [
             'Content-Type: application/json',
@@ -184,7 +209,90 @@ class WalletController extends Controller
         curl_close($curl);
 
         return  $response;
-
     }
 
+    /**
+     * Create savings accounts for a borrower (NGN, USD, USDC)
+     */
+    public function createUserWallets(int $borrowerId): array
+    {
+        try {
+            $borrower = Borrower::find($borrowerId);
+            
+            if (!$borrower) {
+                throw new \Exception("Borrower not found for ID: {$borrowerId}");
+            }
+
+            $products = SavingsProduct::whereIn('product_name', ['NGN', 'USD', 'USDC'])->get();
+
+            if ($products->count() !== 3) {
+                throw new \Exception("Expected 3 savings products (NGN, USD, USDC) but found {$products->count()}");
+            }
+
+            $createdAccounts = [];
+
+            // Create savings accounts for each product
+            foreach ($products as $product) {
+                $account = $this->createSavingsAccount($borrower, $product);
+                if ($account) {
+                    $createdAccounts[] = $account;
+                }
+            }
+
+            Log::info("Successfully created " . count($createdAccounts) . " savings accounts for borrower ID: {$borrowerId}");
+
+            return [
+                'success' => true,
+                'message' => 'Savings accounts created successfully',
+                'accounts' => $createdAccounts
+            ];
+
+        } catch (\Exception $e) {
+            Log::error("Failed to create savings accounts for borrower ID: {$borrowerId}. Error: " . $e->getMessage());
+            
+            return [
+                'success' => false,
+                'message' => $e->getMessage(),
+                'accounts' => []
+            ];
+        }
+    }
+
+    /**
+     * Create a savings account for a specific product
+     */
+    private function createSavingsAccount(Borrower $borrower, SavingsProduct $product): ?Savings
+    {
+        // Check if savings account already exists for this product
+        $existingSavings = Savings::where('borrower_id', $borrower->id)
+            ->where('savings_product_id', $product->id)
+            ->first();
+
+        if ($existingSavings) {
+            Log::info("Savings account already exists for borrower ID: {$borrower->id}, product: {$product->product_name}");
+            return $existingSavings;
+        }
+        // Generate account number
+        $accountNumber = null;
+
+        $savings = Savings::create([
+            'borrower_id' => $borrower->id,
+            'savings_product_id' => $product->id,
+            'account_number' => $accountNumber,
+            'account_name' => "{$borrower->first_name} {$borrower->last_name}",
+            'currency' => $product->product_name,
+            'available_balance' => 0,
+            'ledger_balance' => 0,
+            'minimum_balance_for_interest' => $product->minimum_balance_for_interest_rate,
+            'interest_rate_per_annum' => $product->interest_rate_per_annum,
+            'minimum_balance_for_withdrawal' => $product->minimum_balance_for_withdrawal,
+            'interest_posting_frequency' => $product->interest_posting_frequency,
+            'savings_description' => "{$product->product_name} Savings Account for {$borrower->first_name} {$borrower->last_name}",
+            'account_tier' => 'standard',
+            'account_type' => 'savings',
+            "status" => "inactive"
+        ]);
+
+        return $savings;
+    }
 }
