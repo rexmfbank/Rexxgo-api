@@ -11,11 +11,20 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\DB;
 use Modules\Profile\app\Http\Resources\UserResource;
+use Modules\Wallet\Services\BridgeService; 
 
 
 class ProfileController extends Controller
 {
     use ApiResponse;
+
+    protected $bridgeService;
+
+    // 2. Inject the service into the constructor
+    public function __construct(BridgeService $bridgeService)
+    {
+        $this->bridgeService = $bridgeService;
+    }
 
     /**
      * @OA\Get(
@@ -39,21 +48,14 @@ class ProfileController extends Controller
     }
 
     /**
-     * @OA\Put(
-     *   path="/api/profile",
+     * @OA\Post(
+     *   path="/api/profile/update",
      *   tags={"Profile"},
      *   summary="Update user profile",
      *   security={{"bearerAuth":{}}},
      *   @OA\RequestBody(
      *     required=true,
      *     @OA\JsonContent(
-     *       @OA\Property(property="country", type="string", example="USA", description="Country code (USA or NG)"),
-     *       @OA\Property(property="dob", type="string", format="date", example="1990-01-01"),
-     *       @OA\Property(property="address", type="string", example="123 Main St"),
-     *       @OA\Property(property="city", type="string", example="New York"),
-     *       @OA\Property(property="state", type="string", example="NY"),
-     *       @OA\Property(property="zipcode", type="string", example="10001"),
-     *       @OA\Property(property="ssn", type="string", example="123-45-6789", description="For US users only"),
      *       @OA\Property(property="bvn", type="string", example="12345678901", description="For Nigeria users only"),
      *       @OA\Property(property="nin", type="string", example="12345678901", description="For Nigeria users only")
      *     )
@@ -65,63 +67,66 @@ class ProfileController extends Controller
      */
     public function update(Request $request)
     {
-        if (!auth()->guard('borrower')->check()) {
-            return $this->error('Unauthorized', 401);
-        }
+        $validatedData = $request->validate([
+            'bvn' => 'required_without:nin|string|size:11|regex:/^\d{11}$/',
+            'nin' => 'required_without:bvn|string|size:11|regex:/^\d{11}$/',
+        ]);
 
         $borrower = auth()->guard('borrower')->user();
         // Validate based on country
         $country = $borrower->country;
         if ($borrower->country === 'USA') {
-            $validationRules = $this->getUSValidationRules();
-        } else {
-            $validationRules = $this->getNigeriaValidationRules();
-        }
+            return $this->error('Something went wrong', 500);
+        } 
 
-        $validatedData = $request->validate($validationRules);
 
         try {
-            // Update basic profile fields
-            $updateData = [
-                'dob' => $validatedData['dob'] ?? null,
-                'address' => $validatedData['address'] ?? null,
-                'city' => $validatedData['city'] ?? null,
-                'state' => $validatedData['state'] ?? null,
-                'zipcode' => $validatedData['zipcode'] ?? null,
-            ];
-
-            // Handle country-specific fields
-            if ($country === 'USA') {
-                $updateData['id_type'] = 'SSN';
-                $updateData['id_value'] = $validatedData['ssn'] ?? null;
-
-            } else {
-                // For Nigeria, prioritize BVN over NIN
-                if (isset($validatedData['bvn'])) {
-                    $updateData['id_type'] = 'BVN';
-                    $updateData['id_value'] = $validatedData['bvn'];
-                } elseif (isset($validatedData['nin'])) {
-                    $updateData['id_type'] = 'NIN';
-                    $updateData['id_value'] = $validatedData['nin'];
+            if (isset($validatedData['bvn'])) {
+                if($borrower->bvn != ""){
+                    return $this->error('BVN already exist!', 500);
                 }
-
-                // Fetch additional details from VerifyMe SDK for Nigeria users
-                if (isset($validatedData['bvn']) || isset($validatedData['nin'])) {
-                    $verifyMeData = $this->fetchVerifyMeData($validatedData['bvn'] ?? $validatedData['nin'], $updateData['id_type']);
-                    if ($verifyMeData) {
-                        $updateData = array_merge($updateData, $verifyMeData);
-                    }
+                $accessToken = $this->getQoreIdToken();
+                if($accessToken == null) {
+                    return $this->error('Unable to verify your identity. API error.', 500);
                 }
+                $verifyBvnBasic = $this->verifyBvnBasic($validatedData['bvn'], $borrower->first_name, $borrower->last_name, $accessToken);
+                
+                if($verifyBvnBasic == null){
+                    return $this->error('Invalid BVN supplied');
+                }
+                if($verifyBvnBasic['status']['status'] == "verified"){
+                    $bvn = $verifyBvnBasic['bvn'];
+                    $inputFormat = 'd-m-Y';
+                    $outputFormat = 'Y-m-d';
+
+                    $dateObject = \DateTime::createFromFormat($inputFormat, $bvn['birthdate']);
+                    $formattedDate = $dateObject->format($outputFormat);
+                        
+                    $updateData = [
+                        "first_name" => $bvn['firstname'],
+                        "last_name"=> $bvn['lastname'],
+                        "middle_name"=> $bvn['middlename'],
+                        "dob"=> $formattedDate,
+                        "gender"=> $bvn['gender'],
+                        "id_type" => "bvn",
+                        "id_value" => $validatedData['bvn'], 
+                        "bvn" => $validatedData['bvn'], 
+                        "kyc_status" => "active", 
+                    ];
+                    DB::table('borrowers')->where('id', $borrower->id)->update($updateData);
+                    return $this->success(new UserResource($borrower), 'Profile update successfully');
+                }
+                
+                
+            } elseif (isset($validatedData['nin'])) {
+                $updateData['id_type'] = 'NIN';
+                $updateData['id_value'] = $validatedData['nin'];
+                $borrower = Borrower::find($borrower->id);
+
+                return $this->success(new UserResource($borrower), 'Profile updated successfully');
+            }else {
+                return $this->error('Unable to verify your identity', 500);
             }
-
-            DB::table('borrowers')->where('id', $borrower->id)->update($updateData);
-
-            // Refresh borrower instance
-            $borrower = Borrower::find($borrower->id);
-
-            Log::info("Profile updated for borrower ID: {$borrower->id}, Country: {$country}");
-
-            return $this->success(new UserResource($borrower), 'Profile updated successfully');
 
         } catch (\Exception $e) {
             Log::error("Failed to update profile for borrower ID: {$borrower->id}. Error: " . $e->getMessage());
@@ -129,88 +134,166 @@ class ProfileController extends Controller
         }
     }
 
-    /**
-     * Get validation rules for US users
-     */
-    private function getUSValidationRules(): array
-    {
-        return [
-            'dob' => 'required|date|before:today',
-            'address' => 'required|string|max:255',
-            'city' => 'required|string|max:100',
-            'state' => 'required|string|max:50',
-            'zipcode' => 'required|string|max:10',
-            'ssn' => 'required|string|regex:/^\d{3}-\d{2}-\d{4}$/',
-        ];
-    }
 
     /**
-     * Get validation rules for Nigeria users
+     * @OA\Post(
+     *   path="/api/profile/kyc",
+     *   tags={"Profile"},
+     *   summary="Start KYC process",
+     *   security={{"bearerAuth":{}}},
+     *   @OA\Response(response=200, description="Profile updated successfully"),
+     *   @OA\Response(response=400, description="Validation error"),
+     *   @OA\Response(response=401, description="Unauthorized")
+     * )
      */
-    private function getNigeriaValidationRules(): array
+    public function startKyc(Request $request)
     {
-        return [
-            'bvn' => 'required_without:nin|string|size:11|regex:/^\d{11}$/',
-            'nin' => 'required_without:bvn|string|size:11|regex:/^\d{11}$/',
-        ];
-    }
+        // $validatedData = $request->validate([
+        //     'dob' => 'required|date|before:today',
+        //     'address' => 'required|string|max:255',
+        //     'city' => 'required|string|max:100',
+        //     'state' => 'required|string|max:50',
+        //     'zipcode' => 'required|string|max:10',
+        //     'ssn' => 'required|string|regex:/^\d{3}-\d{2}-\d{4}$/',
+        // ]);
 
-    /**
-     * Fetch additional details from VerifyMe SDK for Nigeria users
-     */
-    private function fetchVerifyMeData(string $idValue, string $idType): ?array
-    {
+        $borrower = auth()->guard('borrower')->user();
+        // Validate based on country
         try {
-            $verifyMeApiKey = env('VERIFYME_API_KEY');
-            $verifyMeBaseUrl = env('VERIFYME_BASE_URL', 'https://vapi.verifyme.ng/v1');
-
-            if (!$verifyMeApiKey) {
-                Log::warning('VerifyMe API key not configured');
-                return null;
-            }
-
-            $endpoint = $idType === 'BVN' 
-                ? "/verifications/identities/bvn/{$idValue}"
-                : "/verifications/identities/nin/{$idValue}";
+            // $updateData['id_type'] = 'SSN';
+            // $updateData['id_value'] = $validatedData['ssn'];
+            // $updateData['dob'] = $validatedData['dob'];
+            // $updateData['address'] = $validatedData['address'];
+            // $updateData['city'] = $validatedData['city'];
+            // $updateData['state'] = $validatedData['state'];
+            // $updateData['zipcode'] = $validatedData['zipcode'];
+            // DB::table('borrowers')->where('id', $borrower->id)->update($updateData);
+            $borrower = Borrower::find($borrower->id);
             
-            $requestData = [];
-            if ($idType === 'NIN') {
-                // We need the user's basic info for NIN verification
-                $borrower = auth()->guard('borrower')->user();
-                $requestData = [
-                    'firstname' => $borrower->first_name ?? 'John',
-                    'lastname' => $borrower->last_name ?? 'Doe',
-                    'dob' => $borrower->dob ? date('d-m-Y', strtotime($borrower->dob)) : '01-01-1990'
+            if($borrower->kyc_status != "active"){
+
+                if($borrower->bridge_customer_id !== "" && $borrower->kyc_link != ""){
+                    return $this->success([
+                        "kyc_link" => $borrower->kyc_link,
+                        "kyc_status" => $borrower->kyc_status,
+                        'tos_link' => $borrower->tos_link,
+                    ], 'Profile updated successfully');
+                }
+                $kycData = [
+                    'full_name' => $borrower->first_name . ' ' . $borrower->last_name,
+                    'email' => $borrower->email,
+                    'type' => 'individual',
                 ];
-            }
-            
-            $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . $verifyMeApiKey,
-                'Content-Type' => 'application/json',
-            ])->post($verifyMeBaseUrl . $endpoint, $requestData);
+        
+                $response = $this->bridgeService->createKycLink($kycData);
 
+                if (!$response) {
+                return $this->error('KYC service is currently unavailable', 500);
+                }
+
+                $customerId = $response['customer_id'];
+                $kyc_link = $response['kyc_link'];
+                $tos_link = $response['tos_link'];
+                $kyc_status = $response['kyc_status'];
+                $rejection_reasons = $response['rejection_reasons'];
+                $tos_status = $response['tos_status'];
+
+                $updateData['bridge_customer_id'] = $customerId;
+                $updateData['kyc_link'] = $kyc_link;
+                $updateData['tos_link'] = $tos_link;
+                $updateData['tos_status'] = $tos_status;
+                $updateData['rejection_reasons'] = json_encode($rejection_reasons, JSON_PRETTY_PRINT);
+                $updateData['kyc_status'] = $kyc_status == "not_started" ? "pending" : ($kyc_status == "approved" ? "active" : "pending");
+
+                DB::table('borrowers')->where('id', $borrower->id)->update($updateData);
+                $borrower = Borrower::find($borrower->id);
+
+                return $this->success([
+                    "kyc_link" => $kyc_link,
+                    "kyc_status" => $borrower->kyc_status,
+                    'tos_link' => $tos_link
+                ], 'Profile updated successfully');
+            }
+
+            return $this->success([
+            ], 'Profile updated successfully');
+
+        } catch (\Exception $e) {
+            Log::error("Failed to update profile for borrower ID: {$borrower->id}. Error: " . $e->getMessage());
+            return $this->error('Failed to update profile: ' . $e->getMessage(), 500);
+        }
+    }
+
+
+/**
+     * Sends a POST request to QoreID to verify BVN and name.
+     *
+     * @param string $bvn The BVN.
+     * @param string $firstName The first name.
+     * @param string $lastName The last name.
+     * @param string $accessToken The Bearer token.
+     * @return object|null The decoded JSON response object on success, or null on failure/error.
+     */
+    private function verifyBvnBasic(
+        string $bvn,
+        string $firstName,
+        string $lastName,
+        string $accessToken
+    ): ?array {
+        $bvnPath = trim(rawurlencode($bvn));
+        $url = env('QOREID_BASEURL') . "/v1/ng/identities/bvn-basic/{$bvnPath}";
+
+        $payload = [
+            'firstname' => $firstName,
+            'lastname' => $lastName
+        ];
+
+        try {
+            $response = Http::withToken($accessToken)
+                ->withHeaders(['accept' => 'application/json'])
+                ->asJson() 
+                ->post($url, $payload);
+            
             if ($response->successful()) {
-                $data = $response->json();
-                
-                return [
-                    'first_name' => $data['data']['firstname'] ?? $data['data']['first_name'] ?? null,
-                    'last_name' => $data['data']['lastname'] ?? $data['data']['last_name'] ?? null,
-                    'middle_name' => $data['data']['middlename'] ?? $data['data']['middle_name'] ?? null,
-                    'dob' => $data['data']['dob'] ?? $data['data']['date_of_birth'] ?? null,
-                    'gender' => $data['data']['gender'] ?? null,
-                    'phone' => $data['data']['phone'] ?? $data['data']['phone_number'] ?? null,
-                    'address' => $data['data']['address'] ?? null,
-                    'city' => $data['data']['city'] ?? null,
-                    'state' => $data['data']['state'] ?? null,
-                ];
+                return $response->json(); 
             }
-
-            Log::warning("VerifyMe API call failed: " . $response->body());
             return null;
 
         } catch (\Exception $e) {
-            Log::error("VerifyMe API error: " . $e->getMessage());
+
             return null;
+        }
+    }
+
+    /**
+     * Attempts to retrieve the access token from the QoreID API.
+     *
+     * @return string|null The access token string or null on failure.
+     */
+    private function getQoreIdToken(): ?string
+    {
+        $clientId = env('QOREID_CLIENT_ID');
+        $secret = env('QOREID_SECRET');
+        $tokenUrl = env('QOREID_BASEURL').'/token';
+
+        if (!$clientId || !$secret || !$tokenUrl) {
+            return null; // Configuration missing
+        }
+
+        $payload = ['clientId' => $clientId, 'secret' => $secret];
+
+        try {
+            $response = Http::withHeaders(['accept' => 'text/plain'])
+                ->post($tokenUrl, $payload);
+            info($response);
+            if ($response->successful()) {
+                $tokenData = $response->json(); 
+                return $tokenData['accessToken'] ?? null;
+            }
+            return null;
+
+        } catch (\Exception $e) {
+            throw $e;
         }
     }
 

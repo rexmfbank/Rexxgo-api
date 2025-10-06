@@ -175,6 +175,7 @@ class AuthController extends Controller
                 'middle_name'   => $payload['middle_name'] ?? null,
                 'last_name'     => $payload['last_name'],
                 'unique_number' => $payload['phone'],
+                'country' => $payload['country'],
                 'phone_verified_at' => now(), // phone is verified after registration
                 'kyc_status'        => 'kyc_pending', // pending until kyc is done
                 'status'        => 'active', // pending until passcode is set
@@ -208,7 +209,7 @@ class AuthController extends Controller
 
     /**
      * @OA\Post(
-     *   path="/api/auth/otp/send",
+     *   path="/api/auth/sendotp",
      *   tags={"Auth"},
      *   summary="Send OTP to email",
      *   @OA\RequestBody(
@@ -266,7 +267,7 @@ class AuthController extends Controller
 
     /**
      * @OA\Post(
-     *   path="/api/auth/otp/verify",
+     *   path="/api/auth/verifyotp",
      *   tags={"Auth"},
      *   summary="Verify OTP",
      *   @OA\RequestBody(
@@ -312,7 +313,7 @@ class AuthController extends Controller
 
     /**
      * @OA\Post(
-     *   path="/api/auth/facial-id",
+     *   path="/api/auth/facialid",
      *   tags={"Auth"},
      *   summary="Submit facial verification id",
      *   @OA\RequestBody(
@@ -515,7 +516,7 @@ class AuthController extends Controller
 
     /**
      * @OA\Post(
-     *   path="/api/auth/pin",
+     *   path="/api/auth/setpin",
      *   tags={"Auth"},
      *   summary="Set transaction PIN",
      *   @OA\RequestBody(

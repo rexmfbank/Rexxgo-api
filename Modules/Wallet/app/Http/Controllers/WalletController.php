@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Borrower;
 use App\Models\Savings;
 use App\Models\SavingsProduct;
+use App\Models\UsdWalletQueue;
 use Illuminate\Http\Request;
 use App\Traits\ApiResponse;
 use Illuminate\Support\Facades\Log;
@@ -29,15 +30,15 @@ class WalletController extends Controller
      *   @OA\Response(response=401, description="Unauthorized")
      * )
      */
-  
+
     public function getBalance($accountNumber)
     {
-        $baseUrl = env('BAASCORE'). "/baas/api/v1/services/virtual-account/$accountNumber/wallet-balance";
+        $baseUrl = env('BAASCORE') . "/baas/api/v1/services/virtual-account/$accountNumber/wallet-balance";
         $response = $this->getCurl($baseUrl);
         $response = json_decode($response, true);
-        if($response && $response['success'] == true){
+        if ($response && $response['success'] == true) {
             return $this->success($response['data'], 'Wallet balance retrieved successfully', 200);
-        }else{
+        } else {
             return $this->error($response['message'] ?? 'Failed to retrieve wallet balance', 400);
         }
     }
@@ -64,26 +65,26 @@ class WalletController extends Controller
             // 'x-api-key: '.env('BAASCORE_APIKEY'),
             // 'x-client-id: '.env('BAASCORE_CLIENTID'),
             // 'x-company-code: '.env('BAASCORE_COMPANYCODE'),
-            'Authorization : Bearer '.env('BAASCORE_SECRET'),
+            'Authorization : Bearer ' . env('BAASCORE_SECRET'),
         ];
 
         // dd($headers);
 
         // dd(!auth()->guard('borrower')->check());
 
-        if(!auth()->guard('borrower')->check()){
+        if (!auth()->guard('borrower')->check()) {
             return $this->error('Invalid access token, Please Login', 401);
         }
 
         $borrower = Borrower::find(auth()->guard('borrower')->user()->id);
-    
+
         if (!$borrower) {
             return $this->error('Customer not found!', 400);
         }
 
         //check if customer already has a savings account
-        $wallet = Savings::where('borrower_id', $borrower->id)->where('currency','NGN')->first();
-        if($wallet){
+        $wallet = Savings::where('borrower_id', $borrower->id)->where('currency', 'NGN')->first();
+        if ($wallet) {
             return $this->error('Wallet already exists', 400);
         }
 
@@ -120,13 +121,13 @@ class WalletController extends Controller
         //     "timestamp" => "2025-08-25 02:02:47"
         // ];
 
-        if($response && $response['success'] == true){
+        if ($response && $response['success'] == true) {
 
             //create a savings account and update account number
             Savings::updateOrCreate([
                 'borrower_id' => $borrower->id,
                 'currency' => 'NGN'
-            ],[
+            ], [
                 'company_id' => $borrower->company_id,
                 'branch_id' => $borrower->branch_id,
                 'borrower_id' => $borrower->id,
@@ -141,12 +142,76 @@ class WalletController extends Controller
             ]);
 
             return $this->success($response['data'], 'Wallet created successfully', 200);
-        }else{
+        } else {
             return $this->error($response['message'] ?? 'Wallet creation failed', 400);
-        }   
+        }
+    }
 
-        
 
+    public function createUsWallet(Request $request)
+    {
+        $limit = 10;
+        $processedCount = 0;
+
+        $pendingTasks = UsdWalletQueue::where('status', 'pending')
+            ->limit($limit)
+            ->get();
+
+        if ($pendingTasks->isEmpty()) {
+            return response()->json(['message' => 'No pending USD wallet creation tasks found.'], 200);
+        }
+
+        foreach ($pendingTasks as $task) {
+
+            $task->update(['status' => 'processing']);
+
+            try {
+                $borrower = Borrower::find($task->borrower_id);
+
+                if (!$borrower) {
+                    Log::error("Cron: Borrower not found for task ID: {$task->id}");
+                    $task->update(['status' => 'failed', 'retries' => $task->retries + 1]);
+                    continue;
+                }
+
+                $savingWallet = Savings::where('borrower_id', $borrower->id)
+                    ->where('currency', 'USD')
+                    ->first();
+
+                if (!$savingWallet) {
+                    Log::error("Cron: USD Saving wallet not found for Borrower ID: {$borrower->id}");
+                    $task->update(['status' => 'failed', 'retries' => $task->retries + 1]);
+                    continue;
+                }
+
+                // $bridgeResponse = $this->bridgeService->createVirtualAccount($task->bridge_customer_id);
+
+                if (empty($bridgeResponse) || empty($bridgeResponse['account_number'])) {
+                    Log::error("Cron: Bridge API failed for customer: {$task->bridge_customer_id}. Retrying.");
+                    $task->update(['status' => 'failed', 'retries' => $task->retries + 1]);
+                    continue;
+                }
+
+                $savingWallet->account_number = $bridgeResponse['account_number'];
+                $savingWallet->iban = $bridgeResponse['iban'] ?? null;
+                $savingWallet->bank_name = $bridgeResponse['bank_name'] ?? 'Bridge Virtual Account';
+                $savingWallet->routing_number = $bridgeResponse['routing_number'] ?? null;
+                $savingWallet->account_holder_name = $bridgeResponse['account_holder_name'] ?? $borrower->full_name;
+                $savingWallet->save();
+
+                $task->update(['status' => 'completed']);
+                $processedCount++;
+            } catch (\Exception $e) {
+                Log::error("Cron Job Critical Error for task ID {$task->id}: " . $e->getMessage());
+                $task->update(['status' => 'failed', 'retries' => $task->retries + 1]);
+            }
+        }
+
+        return response()->json([
+            'message' => 'USD wallet cron job finished processing tasks.',
+            'total_tasks_attempted' => $pendingTasks->count(),
+            'processed_successfully' => $processedCount,
+        ]);
     }
 
     //write a GET curl function to get wallet balance
@@ -155,28 +220,28 @@ class WalletController extends Controller
         $curl = curl_init();
 
         curl_setopt_array($curl, array(
-        CURLOPT_URL => $baseUrl,
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_ENCODING => '',
-        CURLOPT_MAXREDIRS => 10,
-        CURLOPT_TIMEOUT => 0,
-        CURLOPT_FOLLOWLOCATION => true,
-        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-        CURLOPT_CUSTOMREQUEST => 'GET',
-        CURLOPT_HTTPHEADER => array(
-            'Content-Type: application/json',
-            'Authorization: Bearer '.env('BAASCORE_SECRET')),
+            CURLOPT_URL => $baseUrl,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING => '',
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 0,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST => 'GET',
+            CURLOPT_HTTPHEADER => array(
+                'Content-Type: application/json',
+                'Authorization: Bearer ' . env('BAASCORE_SECRET')
+            ),
         ));
 
         $response = curl_exec($curl);
         if (curl_errno($curl)) {
             $error_msg = curl_error($curl);
             return $this->error('Curl error: ' . $error_msg, 500);
-        }   
+        }
         curl_close($curl);
 
         return  $response;
-
     }
 
     //write a CURL function reusable 
@@ -184,28 +249,29 @@ class WalletController extends Controller
     {
 
         $curl = curl_init();
-        $baseUrl = env('BAASCORE')."/baas/api/v1/services/virtual-account/create";
+        $baseUrl = env('BAASCORE') . "/baas/api/v1/services/virtual-account/create";
 
         curl_setopt_array($curl, array(
-        CURLOPT_URL => $baseUrl,
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_ENCODING => '',
-        CURLOPT_MAXREDIRS => 10,
-        CURLOPT_TIMEOUT => 0,
-        CURLOPT_FOLLOWLOCATION => true,
-        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-        CURLOPT_CUSTOMREQUEST => 'POST',
-        CURLOPT_POSTFIELDS => json_encode($data),
-        CURLOPT_HTTPHEADER => array(
-            'Content-Type: application/json',
-            'Authorization: Bearer '.env('BAASCORE_SECRET')),
+            CURLOPT_URL => $baseUrl,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING => '',
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 0,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST => 'POST',
+            CURLOPT_POSTFIELDS => json_encode($data),
+            CURLOPT_HTTPHEADER => array(
+                'Content-Type: application/json',
+                'Authorization: Bearer ' . env('BAASCORE_SECRET')
+            ),
         ));
 
         $response = curl_exec($curl);
         if (curl_errno($curl)) {
             $error_msg = curl_error($curl);
             return $this->error('Curl error: ' . $error_msg, 500);
-        }   
+        }
         curl_close($curl);
 
         return  $response;
@@ -218,7 +284,7 @@ class WalletController extends Controller
     {
         try {
             $borrower = Borrower::find($borrowerId);
-            
+
             if (!$borrower) {
                 throw new \Exception("Borrower not found for ID: {$borrowerId}");
             }
@@ -246,10 +312,9 @@ class WalletController extends Controller
                 'message' => 'Savings accounts created successfully',
                 'accounts' => $createdAccounts
             ];
-
         } catch (\Exception $e) {
             Log::error("Failed to create savings accounts for borrower ID: {$borrowerId}. Error: " . $e->getMessage());
-            
+
             return [
                 'success' => false,
                 'message' => $e->getMessage(),
@@ -257,6 +322,7 @@ class WalletController extends Controller
             ];
         }
     }
+
 
     /**
      * Create a savings account for a specific product

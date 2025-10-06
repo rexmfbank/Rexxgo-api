@@ -16,7 +16,7 @@ use Modules\Profile\app\Http\Controllers\ProfileController;
 Route::middleware(['auth:borrower', 'throttle:10,1'])->group(function () {
     Route::prefix('profile')->group(function () {
         Route::get('/', [ProfileController::class, 'index'])->name('profile.index');
-        Route::put('/', [ProfileController::class, 'update'])->name('profile.update');
+        Route::post('/kyc', [ProfileController::class, 'startKyc'])->name('profile.update-us');
         Route::get('/kyc-status', [ProfileController::class, 'getKycStatus'])->name('profile.kyc-status');
     });
 });

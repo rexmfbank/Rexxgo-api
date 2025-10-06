@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Modules\Wallet\app\Http\Controllers\BridgeWebhookController;
 use Modules\Wallet\app\Http\Controllers\WalletController;
 
 /*
@@ -33,3 +34,8 @@ Route::middleware(['auth:borrower', 'throttle:10,1'])->group(function () {
     Route::get('/wallet/{accountNumber}/balance', [WalletController::class, 'getBalance'])->name('wallet.get-balance');
     Route::post('/wallet/ngn', [WalletController::class, 'createNairaWallet'])->name('wallet.create-ngn-alt');
 });
+
+
+Route::get('/wallet-cronjob/usd', [WalletController::class, 'createUsWallet'])->name('wallet.usWalletCronjob');
+Route::post('/bridge/webhook', [BridgeWebhookController::class, 'bridgeWebhook'])->name('wallet.bridgewebhook');
+

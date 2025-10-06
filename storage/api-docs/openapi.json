@@ -124,13 +124,13 @@
                 }
             }
         },
-        "/api/auth/otp/send": {
+        "/api/auth/sendotp": {
             "post": {
                 "tags": [
                     "Auth"
                 ],
                 "summary": "Send OTP to email",
-                "operationId": "422d984eb526cca36a2442f7eda0566a",
+                "operationId": "5eec39f4afceea344c7b1e8e2a0d5781",
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -164,13 +164,13 @@
                 }
             }
         },
-        "/api/auth/otp/verify": {
+        "/api/auth/verifyotp": {
             "post": {
                 "tags": [
                     "Auth"
                 ],
                 "summary": "Verify OTP",
-                "operationId": "389bbe36a34d4071760a779b8dadf93b",
+                "operationId": "448780b18a23da790577bb45c3324159",
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -205,13 +205,13 @@
                 }
             }
         },
-        "/api/auth/facial-id": {
+        "/api/auth/facialid": {
             "post": {
                 "tags": [
                     "Auth"
                 ],
                 "summary": "Submit facial verification id",
-                "operationId": "b627fc7157e327d78a5e61186a0bed86",
+                "operationId": "66db0d31e57c33e7e5b75c218b09157c",
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -338,13 +338,13 @@
                 }
             }
         },
-        "/api/auth/pin": {
+        "/api/auth/setpin": {
             "post": {
                 "tags": [
                     "Auth"
                 ],
                 "summary": "Set transaction PIN",
-                "operationId": "f82d64c4f9243e3ed0c0f7b5b64dcc5b",
+                "operationId": "71e1a21407be1cd2ada90cae57dcafe8",
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -651,50 +651,21 @@
                         "bearerAuth": []
                     }
                 ]
-            },
-            "put": {
+            }
+        },
+        "/api/profile/update": {
+            "post": {
                 "tags": [
                     "Profile"
                 ],
                 "summary": "Update user profile",
-                "operationId": "8cf72731cd1a666d1008449e4636665f",
+                "operationId": "b5c5218fa17432b2ede7e90c1cd1d92c",
                 "requestBody": {
                     "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
                                 "properties": {
-                                    "country": {
-                                        "description": "Country code (USA or NG)",
-                                        "type": "string",
-                                        "example": "USA"
-                                    },
-                                    "dob": {
-                                        "type": "string",
-                                        "format": "date",
-                                        "example": "1990-01-01"
-                                    },
-                                    "address": {
-                                        "type": "string",
-                                        "example": "123 Main St"
-                                    },
-                                    "city": {
-                                        "type": "string",
-                                        "example": "New York"
-                                    },
-                                    "state": {
-                                        "type": "string",
-                                        "example": "NY"
-                                    },
-                                    "zipcode": {
-                                        "type": "string",
-                                        "example": "10001"
-                                    },
-                                    "ssn": {
-                                        "description": "For US users only",
-                                        "type": "string",
-                                        "example": "123-45-6789"
-                                    },
                                     "bvn": {
                                         "description": "For Nigeria users only",
                                         "type": "string",
@@ -711,6 +682,31 @@
                         }
                     }
                 },
+                "responses": {
+                    "200": {
+                        "description": "Profile updated successfully"
+                    },
+                    "400": {
+                        "description": "Validation error"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/profile/kyc": {
+            "post": {
+                "tags": [
+                    "Profile"
+                ],
+                "summary": "Update US User profile",
+                "operationId": "b7f715a9ac23771431dc56d829fc8893",
                 "responses": {
                     "200": {
                         "description": "Profile updated successfully"
