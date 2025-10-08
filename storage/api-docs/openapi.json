@@ -747,16 +747,41 @@
                 ]
             }
         },
+        "/api/wallets": {
+            "get": {
+                "tags": [
+                    "Wallet"
+                ],
+                "summary": "Get all wallet",
+                "operationId": "b2d0b8e52b0491774583cb01d2ca8cbb",
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    },
+                    "400": {
+                        "description": "Bad Request"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/wallets/{accountNumber}/balance": {
             "get": {
                 "tags": [
                     "Wallet"
                 ],
                 "summary": "Get wallet balance",
-                "operationId": "cd7f4a6fbf43e9bf5420dc7b89c1f9da",
+                "operationId": "dd3199aa40bfd99e71d5d2cee20eabdc",
                 "parameters": [
                     {
-                        "name": "accountNumber",
+                        "name": "account_id",
                         "in": "path",
                         "required": true,
                         "schema": {

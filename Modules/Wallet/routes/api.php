@@ -16,8 +16,8 @@ use Modules\Wallet\app\Http\Controllers\WalletController;
 
 Route::middleware(['auth:borrower', 'throttle:10,1'])->group(function () {
     Route::prefix('wallets')->group(function () {
-        Route::get('/{accountNumber}/balance', [WalletController::class, 'getBalance'])->name('wallet.balance');
-
+        Route::get('/', [WalletController::class, 'Wallets'])->name('wallet.all');
+        Route::get('/{accountNumber}/balance', [WalletController::class, 'getWalletbalance'])->name('wallet.balance');
         Route::middleware(['kyc'])->group(function () {
             Route::post('/ngn', [WalletController::class, 'createNairaWallet'])->name('wallet.create-ngn');
             Route::post('/usd', [WalletController::class, 'createUsWallet'])->name('wallet.create-usd');

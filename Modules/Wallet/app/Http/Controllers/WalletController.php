@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use App\Traits\ApiResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Modules\Wallet\app\Http\Resources\WalletResource;
 use Modules\Wallet\Services\BridgeService;
 
 class WalletController extends Controller
@@ -25,33 +26,57 @@ class WalletController extends Controller
         $this->bridgeService = $bridgeService;
     }
 
-    /**
-     * Display a listing of the resource.
+       /**
+     * @OA\Get(
+     *   path="/api/wallets",
+     *   tags={"Wallet"},
+     *   summary="Get all wallet",
+     *   security={{"bearerAuth":{}}},
+     *   @OA\Response(response=200, description="Success"),
+     *   @OA\Response(response=400, description="Bad Request"),
+     *   @OA\Response(response=401, description="Unauthorized")
+     * )
      */
+    public function Wallets()
+    {
+        $wallets = DB::table('savings')->where("borrower_id", auth()->guard('borrower')->user()->id)->get();
+        $wallets = WalletResource::collection($wallets);
+        return $this->success($wallets, 'Wallets retrieved successfully', 200);
+    }
+
     /**
      * @OA\Get(
      *   path="/api/wallets/{accountNumber}/balance",
      *   tags={"Wallet"},
      *   summary="Get wallet balance",
      *   security={{"bearerAuth":{}}},
-     *   @OA\Parameter(name="accountNumber", in="path", required=true, @OA\Schema(type="string")),
+     *   @OA\Parameter(name="account_id", in="path", required=true, @OA\Schema(type="string")),
      *   @OA\Response(response=200, description="Success"),
      *   @OA\Response(response=400, description="Bad Request"),
      *   @OA\Response(response=401, description="Unauthorized")
      * )
      */
 
-    public function getBalance($accountNumber)
+    public function getWalletbalance($accountNumber)
     {
-        $baseUrl = env('BAASCORE') . "/baas/api/v1/services/virtual-account/$accountNumber/wallet-balance";
-        $response = $this->getCurl($baseUrl);
-        $response = json_decode($response, true);
-        if ($response && $response['success'] == true) {
-            return $this->success($response['data'], 'Wallet balance retrieved successfully', 200);
+        $wallet = DB::table('savings')->where("account_number", $accountNumber)->first();
+        if ($wallet) {
+            return $this->success(new WalletResource($wallet), 'Wallet balance retrieved successfully', 200);
         } else {
-            return $this->error($response['message'] ?? 'Failed to retrieve wallet balance', 400);
+            return $this->error("Wallet not found!", 400);
         }
+
+        // $baseUrl = env('BAASCORE') . "/baas/api/v1/services/virtual-account/$accountNumber/wallet-balance";
+        // $response = $this->getCurl($baseUrl);
+        // $response = json_decode($response, true);
+        // if ($response && $response['success'] == true) {
+        //     return $this->success($response['data'], 'Wallet balance retrieved successfully', 200);
+        // } else {
+        //     return $this->error($response['message'] ?? 'Failed to retrieve wallet balance', 400);
+        // }
     }
+
+
 
     /**
      * Show the form for creating a new resource.
