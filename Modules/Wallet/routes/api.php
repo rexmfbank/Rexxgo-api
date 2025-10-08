@@ -15,24 +15,16 @@ use Modules\Wallet\app\Http\Controllers\WalletController;
 */
 
 Route::middleware(['auth:borrower', 'throttle:10,1'])->group(function () {
-    
-    /*
-    |--------------------------------------------------------------------------
-    | Wallet Management Routes
-    |--------------------------------------------------------------------------
-    */
-    Route::prefix('wallet')->group(function () {
+    Route::prefix('wallets')->group(function () {
         Route::get('/{accountNumber}/balance', [WalletController::class, 'getBalance'])->name('wallet.balance');
-        Route::post('/ngn', [WalletController::class, 'createNairaWallet'])->name('wallet.create-ngn');
-    });
 
-    /*
-    |--------------------------------------------------------------------------
-    | Alternative Routes (without prefix)
-    |--------------------------------------------------------------------------
-    */
-    Route::get('/wallet/{accountNumber}/balance', [WalletController::class, 'getBalance'])->name('wallet.get-balance');
-    Route::post('/wallet/ngn', [WalletController::class, 'createNairaWallet'])->name('wallet.create-ngn-alt');
+        Route::middleware(['kyc'])->group(function () {
+            Route::post('/ngn', [WalletController::class, 'createNairaWallet'])->name('wallet.create-ngn');
+            Route::post('/usd', [WalletController::class, 'createUsWallet'])->name('wallet.create-usd');
+            Route::post('/usdc', [WalletController::class, 'createUsdcWallet'])->name('wallet.create-usdc');
+            
+        });
+    });
 });
 
 

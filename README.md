@@ -66,3 +66,5 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
 
 php artisan l5-swagger:generate --no-interaction --no-ansi
+
+php artisan migrate --path=database/migrations/2025_10_08_021703_add_developer_fee_percent_to_savings_products_table.php

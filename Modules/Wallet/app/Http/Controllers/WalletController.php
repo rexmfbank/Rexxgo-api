@@ -9,12 +9,22 @@ use App\Models\SavingsProduct;
 use App\Models\UsdWalletQueue;
 use Illuminate\Http\Request;
 use App\Traits\ApiResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Modules\Wallet\Services\BridgeService;
 
 class WalletController extends Controller
 {
 
     use ApiResponse;
+    protected $bridgeService;
+
+    // 2. Inject the service into the constructor
+    public function __construct(BridgeService $bridgeService)
+    {
+        $this->bridgeService = $bridgeService;
+    }
+
     /**
      * Display a listing of the resource.
      */
@@ -46,31 +56,23 @@ class WalletController extends Controller
     /**
      * Show the form for creating a new resource.
      */
+    /**
+     * @OA\Post(
+     *   path="/api/wallets/ngn",
+     *   tags={"Wallet"},
+     *   summary="Create NGN wallet",
+     *   security={{"bearerAuth":{}}},
+     *   @OA\Response(response=200, description="Created"),
+     *   @OA\Response(response=400, description="Bad Request"),
+     *   @OA\Response(response=401, description="Unauthorized")
+     * )
+     */
     public function createNairaWallet(Request $request)
     {
-        /**
-         * @OA\Post(
-         *   path="/api/wallets/ngn",
-         *   tags={"Wallet"},
-         *   summary="Create NGN wallet",
-         *   security={{"bearerAuth":{}}},
-         *   @OA\Response(response=200, description="Created"),
-         *   @OA\Response(response=400, description="Bad Request"),
-         *   @OA\Response(response=401, description="Unauthorized")
-         * )
-         */
-
         $headers = [
             'Content-Type: application/json',
-            // 'x-api-key: '.env('BAASCORE_APIKEY'),
-            // 'x-client-id: '.env('BAASCORE_CLIENTID'),
-            // 'x-company-code: '.env('BAASCORE_COMPANYCODE'),
             'Authorization : Bearer ' . env('BAASCORE_SECRET'),
         ];
-
-        // dd($headers);
-
-        // dd(!auth()->guard('borrower')->check());
 
         if (!auth()->guard('borrower')->check()) {
             return $this->error('Invalid access token, Please Login', 401);
@@ -82,16 +84,19 @@ class WalletController extends Controller
             return $this->error('Customer not found!', 400);
         }
 
+        $savingsProduct = DB::table('savings_products')->where("product_name", SavingsProduct::$ngn)->first();
+
         //check if customer already has a savings account
-        $wallet = Savings::where('borrower_id', $borrower->id)->where('currency', 'NGN')->first();
-        if ($wallet) {
+        $wallet = DB::table('savings')->where("borrower_id", $borrower->id)->where("currency", SavingsProduct::$ngn)->first();
+
+        if ($wallet && $wallet->account_number != "") {
             return $this->error('Wallet already exists', 400);
         }
 
         $data = [
             "firstName"   => $borrower->first_name,
             "lastName"    => $borrower->last_name,
-            "email"       => $borrower->email,
+            "email"       => $borrower->email, //horphy2@gmail.com
             "phoneNumber" => $borrower->phone,
         ];
 
@@ -109,25 +114,13 @@ class WalletController extends Controller
 
         $response = $this->curlFunction($headers, $data);
         $response = json_decode($response, true);
-
-        // $response =  [ 
-        //     "success" => true,
-        //     "message" => "Virtual account created.",
-        //     "data" => [
-        //       "accountNumber" => "9999999011",
-        //       "accountName" => "RexCredit/Bode Thomas",
-        //       "bank" => "Rex MFBank",
-        //     ],
-        //     "timestamp" => "2025-08-25 02:02:47"
-        // ];
-
-        if ($response && $response['success'] == true) {
-
-            //create a savings account and update account number
-            Savings::updateOrCreate([
+        if ($response && isset($response['success']) && $response['success'] == true) {
+            $searchKeys = [
                 'borrower_id' => $borrower->id,
                 'currency' => 'NGN'
-            ], [
+            ];
+
+            $updateOrCreateData = [
                 'company_id' => $borrower->company_id,
                 'branch_id' => $borrower->branch_id,
                 'borrower_id' => $borrower->id,
@@ -137,81 +130,165 @@ class WalletController extends Controller
                 'status' => 'active',
                 'available_balance' => 0,
                 'ledger_balance' => 0,
-                'currency' => 'NGN' ?? null,
-                'savings_product_id' => 1, //default product
-            ]);
+                'currency' => 'NGN',
+                'savings_product_id' => $savingsProduct ? $savingsProduct->id : 1,
+            ];
+            $table = DB::table('savings');
+            $existingRecord = $table->where($searchKeys)->first();
+            //if record already exist, update it. else create new record
+            if ($existingRecord) {
+                $table->where($searchKeys)->update($updateOrCreateData);
+            } else {
+                $insertData = array_merge($searchKeys, $updateOrCreateData);
+                $table->insert($insertData);
+            }
 
             return $this->success($response['data'], 'Wallet created successfully', 200);
         } else {
-            return $this->error($response['message'] ?? 'Wallet creation failed', 400);
+            return $this->error($response['responseMessage'] ?? 'Wallet creation failed', 400);
         }
     }
 
 
+    /**
+     * @OA\Post(
+     *   path="/api/wallets/usd",
+     *   tags={"Wallet"},
+     *   summary="Create USD wallet",
+     *   security={{"bearerAuth":{}}},
+     *   @OA\Response(response=200, description="Created"),
+     *   @OA\Response(response=400, description="Bad Request"),
+     *   @OA\Response(response=401, description="Unauthorized")
+     * )
+     */
     public function createUsWallet(Request $request)
     {
-        $limit = 10;
-        $processedCount = 0;
-
-        $pendingTasks = UsdWalletQueue::where('status', 'pending')
-            ->limit($limit)
-            ->get();
-
-        if ($pendingTasks->isEmpty()) {
-            return response()->json(['message' => 'No pending USD wallet creation tasks found.'], 200);
+        if (!auth()->guard('borrower')->check()) {
+            return $this->error('Invalid access token, Please Login', 401);
         }
 
-        foreach ($pendingTasks as $task) {
+        $borrower = Borrower::find(auth()->guard('borrower')->user()->id);
 
-            $task->update(['status' => 'processing']);
+        if (!$borrower) {
+            return $this->error('Customer not found!', 400);
+        }
 
-            try {
-                $borrower = Borrower::find($task->borrower_id);
+        $savingsProduct = DB::table('savings_products')->where("product_name", SavingsProduct::$usd)->first();
 
-                if (!$borrower) {
-                    Log::error("Cron: Borrower not found for task ID: {$task->id}");
-                    $task->update(['status' => 'failed', 'retries' => $task->retries + 1]);
-                    continue;
-                }
+        //check if customer already has a savings account
+        //usdc wallet
+        $savingWalletUsd = DB::table('savings')->where("borrower_id", $borrower->id)->where("currency", SavingsProduct::$usd)->first();
 
-                $savingWallet = Savings::where('borrower_id', $borrower->id)
-                    ->where('currency', 'USD')
-                    ->first();
+        if ($savingWalletUsd && $savingWalletUsd->account_number != "") {
+            return $this->error('Wallet already exists', 400);
+        }
 
-                if (!$savingWallet) {
-                    Log::error("Cron: USD Saving wallet not found for Borrower ID: {$borrower->id}");
-                    $task->update(['status' => 'failed', 'retries' => $task->retries + 1]);
-                    continue;
-                }
-
-                // $bridgeResponse = $this->bridgeService->createVirtualAccount($task->bridge_customer_id);
-
-                if (empty($bridgeResponse) || empty($bridgeResponse['account_number'])) {
-                    Log::error("Cron: Bridge API failed for customer: {$task->bridge_customer_id}. Retrying.");
-                    $task->update(['status' => 'failed', 'retries' => $task->retries + 1]);
-                    continue;
-                }
-
-                $savingWallet->account_number = $bridgeResponse['account_number'];
-                $savingWallet->iban = $bridgeResponse['iban'] ?? null;
-                $savingWallet->bank_name = $bridgeResponse['bank_name'] ?? 'Bridge Virtual Account';
-                $savingWallet->routing_number = $bridgeResponse['routing_number'] ?? null;
-                $savingWallet->account_holder_name = $bridgeResponse['account_holder_name'] ?? $borrower->full_name;
-                $savingWallet->save();
-
-                $task->update(['status' => 'completed']);
-                $processedCount++;
-            } catch (\Exception $e) {
-                Log::error("Cron Job Critical Error for task ID {$task->id}: " . $e->getMessage());
-                $task->update(['status' => 'failed', 'retries' => $task->retries + 1]);
+        try {
+            //lets get routing number as wallet id
+            $walletId = "";
+            $bridgeResponse = $this->bridgeService->createUsdcWallet($borrower->bridge_customer_id);
+            if (empty($bridgeResponse)) {
+                return $this->error("Unable to create USD wallet", 400);
             }
+            $walletId = $bridgeResponse['id'];
+
+            $bridgeResponse = $this->bridgeService->createUsdWallet(
+                [
+                    "wallet_id" => $walletId,
+                    "customer_id" => $borrower->bridge_customer_id,
+                    "developer_fee_percent" => $savingsProduct->developer_fee_percent
+                ]
+            );
+            if (empty($bridgeResponse)) {
+                return $this->error("Unable to create USD wallet", 400);
+            }
+
+            DB::table('savings')
+                ->where('id', $savingWalletUsd->id)
+                ->update([
+                    'account_number' => $bridgeResponse['source_deposit_instructions']['bank_account_number'],
+                    'bank_name' => $bridgeResponse['source_deposit_instructions']['bank_name'],
+                    'routing_number' => $bridgeResponse['source_deposit_instructions']['bank_routing_number'],
+                    'account_name' => $bridgeResponse['source_deposit_instructions']['bank_beneficiary_name'],
+                    'bridge_id' => $bridgeResponse['id'],
+                ]);
+
+            return response()->json([
+                'message' => 'USD wallet Created.',
+            ]);
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 400);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Server Error: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+
+    /**
+     * @OA\Post(
+     *   path="/api/wallets/usdc",
+     *   tags={"Wallet"},
+     *   summary="Create USDC wallet",
+     *   security={{"bearerAuth":{}}},
+     *   @OA\Response(response=200, description="Created"),
+     *   @OA\Response(response=400, description="Bad Request"),
+     *   @OA\Response(response=401, description="Unauthorized")
+     * )
+     */
+    public function createUsdcWallet(Request $request)
+    {
+        if (!auth()->guard('borrower')->check()) {
+            return $this->error('Invalid access token, Please Login', 401);
         }
 
-        return response()->json([
-            'message' => 'USD wallet cron job finished processing tasks.',
-            'total_tasks_attempted' => $pendingTasks->count(),
-            'processed_successfully' => $processedCount,
-        ]);
+        $borrower = Borrower::find(auth()->guard('borrower')->user()->id);
+
+        if (!$borrower) {
+            return $this->error('Customer not found!', 400);
+        }
+
+        //check if customer already has a savings account
+        //usdc wallet
+        $savingWallet = DB::table('savings')->where("borrower_id", $borrower->id)->where("currency", SavingsProduct::$usdc)->first();
+
+        if ($savingWallet && $savingWallet->account_number != "") {
+            return $this->error('Wallet already exists', 400);
+        }
+
+        try {
+            $bridgeResponse = $this->bridgeService->createUsdcWallet($borrower->bridge_customer_id);
+            if (empty($bridgeResponse)) {
+                return $this->error("Unable to create USD wallet", 400);
+            }
+            DB::table('savings')
+                ->where('id', $savingWallet->id)
+                ->update([
+                    'account_number' => $bridgeResponse['address'],
+                    'bank_name' => 'ETH',
+                    'routing_number' => $bridgeResponse['id'], //wallet id
+                    'account_name' => $borrower->full_name,
+                    "status" => "active"
+                ]);
+            return response()->json([
+                'message' => 'USD wallet Created.',
+            ]);
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 400);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Server Error: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     //write a GET curl function to get wallet balance

@@ -10,7 +10,7 @@ use Throwable;
 
 class BridgeService
 {
-/**
+    /**
      * Create a Bridge KYC Link.
      *
      * Expected $data keys (flat or nested are accepted):
@@ -23,7 +23,7 @@ class BridgeService
      * @return array Response body from Bridge
      * @throws \RuntimeException on non-2xx response or network failure
      */
-    public function createKycLink(array $data) : ?array
+    public function createKycLink(array $data): ?array
     {
         $payload = [
             'full_name' => $data['full_name'],
@@ -35,15 +35,15 @@ class BridgeService
         $apiKey = env('BRIDGE_API_KEY');
         // Use provided idempotency_key or generate a new one
         $idempotencyKey = (string)\Illuminate\Support\Str::uuid();
-        
+
         try {
             $response = \Illuminate\Support\Facades\Http::withHeaders([
                 'Api-Key' => $apiKey,
                 'Idempotency-Key' => $idempotencyKey,
             ])->acceptJson()
-              ->post($baseUrl . '/v0/kyc_links', $payload); 
+                ->post($baseUrl . '/v0/kyc_links', $payload);
         } catch (\Throwable $e) {
-            
+
             Log::error('Failed to contact Bridge: ' . $e->getMessage());
         }
 
@@ -51,9 +51,9 @@ class BridgeService
             $message = 'Bridge error: ' . $response->status();
             $body = $response->json();
             if (is_array($body)) {
-                $message .= ' ' . json_encode($body); 
+                $message .= ' ' . json_encode($body);
             } else {
-                $message .= ' ' . $response->body(); 
+                $message .= ' ' . $response->body();
             }
             throw new \RuntimeException($message);
         }
@@ -61,4 +61,97 @@ class BridgeService
         return $response->json();
     }
 
+
+    /**
+     * Create a USD Virtual Account for a Bridge Customer.
+     *
+     * Expected $data keys:
+     * - customer_id (string)  => Bridge customer ID (required)
+     * - developer_fee_percent (optional, default 0)
+     * - idempotency_key (optional)
+     *
+     * @param array $data
+     * @return array|null Response body from Bridge
+     * @throws \RuntimeException on non-2xx response or network failure
+     */
+    public function createUsdWallet(array $data): ?array
+    {
+        Log::info("Payload: ".json_encode($data));
+        $customerId = $data['customer_id'] ?? null;
+
+        if (!$customerId) {
+            throw new \InvalidArgumentException('customer_id is required.');
+        }
+
+       $payload = [
+            'developer_fee_percent' => $data['developer_fee_percent'] ?? '0',
+            'source' => [
+                'currency' => 'usd',
+            ],
+            'destination' => [
+                'currency' => 'usdc',
+                'payment_rail' => 'ethereum',
+                'bridge_wallet_id' => $data['wallet_id'],
+            ],
+        ];
+
+
+        $baseUrl = rtrim(env('BRIDGE_BASE_URL', 'https://api.bridge.xyz'), '/');
+        $apiKey = env('BRIDGE_API_KEY');
+        $idempotencyKey = $data['idempotency_key'] ?? (string) \Illuminate\Support\Str::uuid();
+
+        try {
+            $response = \Illuminate\Support\Facades\Http::withHeaders([
+                'Api-Key' => $apiKey,
+                'Idempotency-Key' => $idempotencyKey,
+            ])
+                ->acceptJson()
+                ->post("{$baseUrl}/v0/customers/{$customerId}/virtual_accounts", $payload);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to contact Bridge (createUsdWallet): ' . $e->getMessage());
+            throw new \RuntimeException('Network error contacting Bridge.');
+        }
+
+        if ($response->failed()) {
+            $message = 'API error: ' . $response->status();
+            $body = $response->json();
+            \Illuminate\Support\Facades\Log::error(json_encode($body));
+
+            if (is_array($body)) {
+                $message .= ' ' . $body["message"];
+            } else {
+                $message .= ' ' . $response->body();
+            }
+            throw new \RuntimeException($message);
+        }
+        return $response->json();
+    }
+
+
+    public function createUsdcWallet(string $customerId): ?array
+    {
+        $baseUrl = rtrim(env('BRIDGE_BASE_URL', 'https://api.bridge.xyz'), '/');
+        $apiKey = env('BRIDGE_API_KEY');
+        $idempotencyKey = (string)\Illuminate\Support\Str::uuid();
+
+        $payload = [
+            'currency' => 'usdc',
+            'chain' => 'ethereum',
+        ];
+
+        $response = \Illuminate\Support\Facades\Http::withHeaders([
+            'Api-Key' => $apiKey,
+            'Idempotency-Key' => $idempotencyKey,
+        ])->acceptJson()
+            ->post("{$baseUrl}/v0/customers/{$customerId}/wallets", $payload);
+
+        if ($response->failed()) {
+            $body = $response->json();
+            Log::info(json_encode($body));
+            $message = $body['message'] ?? $response->body();
+            throw new \RuntimeException("Bridge error: {$message}");
+        }
+
+        return $response->json();
+    }
 }

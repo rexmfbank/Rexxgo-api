@@ -14,9 +14,9 @@ class SavingsProduct extends Model
 
     protected $table = 'savings_products';
     protected $guarded = ['id'];
-    public $usd = "USD";
-    public $ngn = "NGN";
-    public $usdc = "USDC";
+    static $usd = "USD";
+    static $ngn = "NGN";
+    static $usdc = "USDC";
 
     protected $fillable = [
         'allow_savings_overdrawn',

@@ -2,6 +2,7 @@
 
 namespace Modules\Wallet\app\Providers;
 
+use App\Http\Middleware\CheckKycStatus;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
 use Nwidart\Modules\Traits\PathNamespace;
@@ -27,6 +28,8 @@ class WalletServiceProvider extends ServiceProvider
         $this->registerConfig();
         $this->registerViews();
         $this->loadMigrationsFrom(module_path($this->name, 'database/migrations'));
+
+        $this->app['router']->aliasMiddleware('kyc', CheckKycStatus::class);
     }
 
     /**

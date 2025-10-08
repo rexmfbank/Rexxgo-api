@@ -26,6 +26,8 @@ class Kernel extends HttpKernel
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
         ],
     ];  
+
+    
     /**
      * The application's route middleware aliases.
      *
@@ -36,7 +38,7 @@ class Kernel extends HttpKernel
     
     protected $middlewareAliases = [
         'resolve.tenant' => \App\Http\Middleware\ResolveTenant::class,
-        
+        'kyc' => \App\Http\Middleware\CheckKycStatus::class,
     ];
 
 }

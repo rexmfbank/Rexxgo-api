@@ -705,7 +705,7 @@
                 "tags": [
                     "Profile"
                 ],
-                "summary": "Update US User profile",
+                "summary": "Start KYC process",
                 "operationId": "b7f715a9ac23771431dc56d829fc8893",
                 "responses": {
                     "200": {
@@ -767,6 +767,81 @@
                 "responses": {
                     "200": {
                         "description": "Success"
+                    },
+                    "400": {
+                        "description": "Bad Request"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/wallets/ngn": {
+            "post": {
+                "tags": [
+                    "Wallet"
+                ],
+                "summary": "Create NGN wallet",
+                "operationId": "77d9c24e1ca3a97abdedd7d2868a160e",
+                "responses": {
+                    "200": {
+                        "description": "Created"
+                    },
+                    "400": {
+                        "description": "Bad Request"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/wallets/usd": {
+            "post": {
+                "tags": [
+                    "Wallet"
+                ],
+                "summary": "Create USD wallet",
+                "operationId": "71c35ca8dcbe873998fe34f6cd2635d8",
+                "responses": {
+                    "200": {
+                        "description": "Created"
+                    },
+                    "400": {
+                        "description": "Bad Request"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/wallets/usdc": {
+            "post": {
+                "tags": [
+                    "Wallet"
+                ],
+                "summary": "Create USDC wallet",
+                "operationId": "7a161a6ab11e01c45535cd25195f1c84",
+                "responses": {
+                    "200": {
+                        "description": "Created"
                     },
                     "400": {
                         "description": "Bad Request"

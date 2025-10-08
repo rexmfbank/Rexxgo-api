@@ -176,7 +176,9 @@ class ProfileController extends Controller
                     return $this->success([
                         "kyc_link" => $borrower->kyc_link,
                         "kyc_status" => $borrower->kyc_status,
-                        'tos_link' => $borrower->tos_link,
+                        "tos_link" => $borrower->tos_link,
+                        'tos_status' => $borrower->tos_status,
+                        'rejection_reasons' => empty($borrower->rejection_reasons) ? [] : json_decode($borrower->rejection_reasons),
                     ], 'Profile updated successfully');
                 }
                 $kycData = [
@@ -211,7 +213,9 @@ class ProfileController extends Controller
                 return $this->success([
                     "kyc_link" => $kyc_link,
                     "kyc_status" => $borrower->kyc_status,
-                    'tos_link' => $tos_link
+                    'tos_link' => $tos_link,
+                    'tos_status' => $borrower->tos_status,
+                    'rejection_reasons' => empty($borrower->rejection_reasons) ? [] : json_decode($borrower->rejection_reasons),
                 ], 'Profile updated successfully');
             }
 
@@ -319,7 +323,11 @@ class ProfileController extends Controller
             'kyc_status' => $borrower->kyc_status,
             'id_type' => $borrower->id_type,
             'id_verified' => !empty($borrower->id_value),
-            'profile_completion' => $this->calculateProfileCompletion($borrower)
+            'profile_completion' => $this->calculateProfileCompletion($borrower),
+            "kyc_link" => $borrower->kyc_link,
+            "tos_link" => $borrower->tos_link,
+            'tos_status' => $borrower->tos_status,
+            'rejection_reasons' => empty($borrower->rejection_reasons) ? [] : json_decode($borrower->rejection_reasons),
         ], 'KYC status retrieved successfully');
     }
 
