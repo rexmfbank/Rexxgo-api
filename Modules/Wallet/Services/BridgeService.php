@@ -133,7 +133,7 @@ class BridgeService
         $baseUrl = rtrim(env('BRIDGE_BASE_URL', 'https://api.bridge.xyz'), '/');
         $apiKey = env('BRIDGE_API_KEY');
         $idempotencyKey = (string)\Illuminate\Support\Str::uuid();
-
+        info("{$baseUrl}/v0/customers/{$customerId}/wallets");
         $payload = [
             'currency' => 'usdc',
             'chain' => 'ethereum',
@@ -149,7 +149,7 @@ class BridgeService
             $body = $response->json();
             Log::info(json_encode($body));
             $message = $body['message'] ?? $response->body();
-            throw new \RuntimeException("Bridge error: {$message}");
+            throw new \RuntimeException("Bridge error1: {$message}");
         }
 
         return $response->json();

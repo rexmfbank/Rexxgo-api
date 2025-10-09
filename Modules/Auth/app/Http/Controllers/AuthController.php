@@ -16,6 +16,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Modules\Wallet\app\Http\Controllers\WalletController;
+use Modules\Wallet\Services\BridgeService;
 
 class AuthController extends Controller
 {
@@ -182,7 +183,9 @@ class AuthController extends Controller
             ]);
             
             // Create savings accounts for NGN, USD, USDC
-            $walletController = new WalletController();
+            $bridgeService = new BridgeService();
+
+            $walletController = new WalletController($bridgeService);
             $savingsResult = $walletController->createUserWallets($borrower->id);
             
             // Log the result
