@@ -828,7 +828,43 @@ class AuthController extends Controller
 
 
 
+    /**
+     * @OA\Post(
+     *   path="/api/auth/otp/reset/verify",
+     *   tags={"Auth"},
+     *   summary="Verify Reset OTP",
+     *   @OA\RequestBody(
+     *     required=true,
+     *     @OA\JsonContent(
+     *       required={"email","otp"},
+     *       @OA\Property(property="email", type="string", format="email"),
+     *       @OA\Property(property="otp", type="string", example="123456"),
+     *     )
+     *   ),
+     *   @OA\Response(response=200, description="Reset"),
+     *   @OA\Response(response=400, description="Invalid or expired OTP")
+     * )
+     */
+    public function otpResetVerify(Request $request)
+    {
+        $request->validate([
+            'email'    => 'required|email|exists:borrowers,email',
+            'otp'      => 'required|numeric',
+        ]);
 
+        $record = Borrower::where('email', $request->email)->first();
+
+        //check otp expired
+        if($record && $record->otp_expires_at && Carbon::now()->greaterThan($record->otp_expires_at)) {
+            return $this->error('OTP has expired. Please request a new one.', 400);
+        }
+
+        if (!$record || base64_decode($record->otp) !== $request->otp) {
+            return $this->error('Invalid OTP', 400);
+        }
+
+        return $this->success('OTP verified successfully');
+    }
 
 
 

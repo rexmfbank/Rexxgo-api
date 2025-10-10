@@ -24,6 +24,7 @@ Route::prefix('auth')
         Route::get('refresh', [AuthController::class, 'refresh']);
         Route::post('/get-email', [AuthController::class, 'getEmail']);
         Route::post('otp/reset/send', [AuthController::class, 'sendResetOtp']);
+        Route::post('otp/reset/verify', [AuthController::class, 'otpResetVerify']);
         Route::post('pin/reset', [AuthController::class, 'resetPin']);
         Route::post('passcode/reset', [AuthController::class, 'resetPasscode']);
         Route::post('facialid', [AuthController::class, 'facialId']);
