@@ -204,9 +204,9 @@ class WalletController extends Controller
         //usdc wallet
         $savingWalletUsd = DB::table('savings')->where("borrower_id", $borrower->id)->where("currency", SavingsProduct::$usd)->first();
 
-        // if ($savingWalletUsd && $savingWalletUsd->account_number != "") {
-        //     return $this->error('Wallet already exists', 400);
-        // }
+        if ($savingWalletUsd && $savingWalletUsd->account_number != "") {
+            return $this->error('Wallet already exists', 400);
+        }
 
         try {
             //lets get routing number as wallet id
@@ -297,6 +297,7 @@ class WalletController extends Controller
                     'account_number' => $bridgeResponse['address'],
                     'bank_name' => 'ETH',
                     'routing_number' => $bridgeResponse['id'], //wallet id
+                    'bridge_id' => $bridgeResponse['id'], //wallet id
                     'account_name' => $borrower->full_name,
                     "status" => "active"
                 ]);

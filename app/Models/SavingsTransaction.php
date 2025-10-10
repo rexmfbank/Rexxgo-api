@@ -15,25 +15,7 @@ class SavingsTransaction extends Model
     protected $guarded = ["id"];
     protected $table = "savings_transactions";
 
-    protected $fillable = [
-        'company_id',
-        'branch_id',
-        'borrower_id',
-        'savings_id',
-        'transaction_amount',
-        'balance',
-        'transaction_date',
-        'transaction_time',
-        'transaction_type',
-        'transaction_description',
-        'debit',
-        'credit',
-        'status_id',
-        'coa',
-        'receipt',
-        'staff_id',
-        'coa_id',
-    ];
+
 
     protected static function booted()
     {

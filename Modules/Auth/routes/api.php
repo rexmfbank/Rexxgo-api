@@ -23,16 +23,8 @@ Route::prefix('auth')
         Route::get('logout', [AuthController::class, 'logout']);
         Route::get('refresh', [AuthController::class, 'refresh']);
         Route::post('/get-email', [AuthController::class, 'getEmail']);
-});
-
-//must be logged in to access these routes
-Route::prefix('auth')
-    ->middleware(['auth:borrower', 'throttle:10,1'])
-    ->group(function () {
-
-        Route::post('sendresetotp', [AuthController::class, 'sendResetOtp']);
-        Route::post('resetpin', [AuthController::class, 'resetPin']);
-        Route::post('resetpasscode', [AuthController::class, 'resetPasscode']);
+        Route::post('otp/reset/send', [AuthController::class, 'sendResetOtp']);
+        Route::post('pin/reset', [AuthController::class, 'resetPin']);
+        Route::post('passcode/reset', [AuthController::class, 'resetPasscode']);
         Route::post('facialid', [AuthController::class, 'facialId']);
-
-    });
+});

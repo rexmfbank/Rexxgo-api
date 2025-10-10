@@ -149,7 +149,7 @@ class BridgeService
             $body = $response->json();
             Log::info(json_encode($body));
             $message = $body['message'] ?? $response->body();
-            throw new \RuntimeException("Bridge error1: {$message}");
+            throw new \RuntimeException("Bridge error: {$message}");
         }
 
         return $response->json();

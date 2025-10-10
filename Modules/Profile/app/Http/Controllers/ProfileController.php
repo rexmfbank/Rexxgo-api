@@ -220,7 +220,12 @@ class ProfileController extends Controller
             }
 
             return $this->success([
-            ], 'Profile updated successfully');
+                        "kyc_link" => $borrower->kyc_link,
+                        "kyc_status" => $borrower->kyc_status,
+                        "tos_link" => $borrower->tos_link,
+                        'tos_status' => $borrower->tos_status,
+                        'rejection_reasons' => empty($borrower->rejection_reasons) ? [] : json_decode($borrower->rejection_reasons),
+                    ], 'Profile updated successfully');
 
         } catch (\Exception $e) {
             Log::error("Failed to update profile for borrower ID: {$borrower->id}. Error: " . $e->getMessage());
