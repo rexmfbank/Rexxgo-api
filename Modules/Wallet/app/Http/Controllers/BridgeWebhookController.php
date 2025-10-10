@@ -257,7 +257,8 @@ class BridgeWebhookController extends Controller
                         }
                         $borrower->kyc_status = "active";
                     } elseif ($kycStatus == "not_started") {
-                        $borrower->kyc_status = "pending";
+                    } elseif ($kycStatus == "under_review") {
+                        $borrower->kyc_status = "awaiting_approval";
                     } else {
                         $borrower->kyc_status = $kycStatus;
                     }
