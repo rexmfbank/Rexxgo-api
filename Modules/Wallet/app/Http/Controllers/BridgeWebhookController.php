@@ -182,6 +182,8 @@ class BridgeWebhookController extends Controller
 
     private function handleCustomerEvent(array $event): void
     {
+        Log::info("Customer webhook");
+        Log::info(json_encode($event));
         $eventType = $event['event_type'] ?? 'unknown';
         $objectId = $event['event_object']['id'] ?? 'N/A';
         $status = $event['event_object']['status'] ?? null;
