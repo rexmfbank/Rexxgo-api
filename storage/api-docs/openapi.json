@@ -788,6 +788,104 @@
                 ]
             }
         },
+        "/api/profile/passcode/reset": {
+            "post": {
+                "tags": [
+                    "Profile"
+                ],
+                "summary": "Reset passcode ",
+                "operationId": "45e0cb9739c7767addca849a4f816ad2",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "old_passcode",
+                                    "passcode",
+                                    "passcode_confirmation"
+                                ],
+                                "properties": {
+                                    "old_passcode": {
+                                        "type": "string",
+                                        "example": "123456"
+                                    },
+                                    "passcode": {
+                                        "type": "string"
+                                    },
+                                    "passcode_confirmation": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Reset"
+                    },
+                    "400": {
+                        "description": "Invalid OTP"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/profile/pin/reset": {
+            "post": {
+                "tags": [
+                    "Profile"
+                ],
+                "summary": "Reset PIN ",
+                "operationId": "0a8343899182c8cccb16d127decdd78d",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "old_pin",
+                                    "pin",
+                                    "pin_confirmation"
+                                ],
+                                "properties": {
+                                    "old_pin": {
+                                        "type": "string",
+                                        "example": "123456"
+                                    },
+                                    "pin": {
+                                        "type": "string"
+                                    },
+                                    "pin_confirmation": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Reset"
+                    },
+                    "400": {
+                        "description": "Invalid or expired OTP"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/wallets": {
             "get": {
                 "tags": [
@@ -798,6 +896,29 @@
                 "responses": {
                     "200": {
                         "description": "Success"
+                    },
+                    "400": {
+                        "description": "Bad Request"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Wallet"
+                ],
+                "summary": "Create All wallets (NGN, USD, USDC)",
+                "operationId": "39a4cfd7035f3f58e89e3a6fb9e92790",
+                "responses": {
+                    "200": {
+                        "description": "Created"
                     },
                     "400": {
                         "description": "Bad Request"

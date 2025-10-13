@@ -26,7 +26,7 @@ class WalletController extends Controller
         $this->bridgeService = $bridgeService;
     }
 
-       /**
+    /**
      * @OA\Get(
      *   path="/api/wallets",
      *   tags={"Wallet"},
@@ -76,6 +76,183 @@ class WalletController extends Controller
         // }
     }
 
+    /**
+     * Show the form for creating a new resource.
+     */
+    /**
+     * @OA\Post(
+     *   path="/api/wallets",
+     *   tags={"Wallet"},
+     *   summary="Create All wallets (NGN, USD, USDC)",
+     *   security={{"bearerAuth":{}}},
+     *   @OA\Response(response=200, description="Created"),
+     *   @OA\Response(response=400, description="Bad Request"),
+     *   @OA\Response(response=401, description="Unauthorized")
+     * )
+     */
+    public function createWallets(Request $request)
+    {
+        try {
+
+            $errorMessage = "";
+
+            //create ngn wallet
+            $headers = [
+                'Content-Type: application/json',
+                'Authorization : Bearer ' . env('BAASCORE_SECRET'),
+            ];
+
+            if (!auth()->guard('borrower')->check()) {
+                return $this->error('Invalid access token, Please Login', 401);
+            }
+
+            $borrower = Borrower::find(auth()->guard('borrower')->user()->id);
+
+            if (!$borrower) {
+                return $this->error('Customer not found!', 400);
+            }
+
+            $savingsProduct = DB::table('savings_products')->where("product_name", SavingsProduct::$ngn)->first();
+
+            //check if customer already has a savings account
+            $wallet = DB::table('savings')->where("borrower_id", $borrower->id)->where("currency", SavingsProduct::$ngn)->first();
+
+            if ($wallet && $wallet->account_number != "") {
+                $errorMessage .= "NGN Wallet already exists. ";
+            }else {
+                 $data = [
+                    "firstName"   => $borrower->first_name,
+                    "lastName"    => $borrower->last_name,
+                    "email"       => $borrower->email, //horphy2@gmail.com
+                    "phoneNumber" => $borrower->phone,
+                ];
+
+                // Merge into request
+                $request->merge($data);
+
+                // Validate request
+                $request->validate([
+                    'firstName'   => 'required|string|max:50',
+                    'lastName'    => 'required|string|max:50',
+                    'email'       => 'required|email|max:100',
+                    'phoneNumber' => 'required|string|min:11|max:15',
+                ]);
+
+
+                $response = $this->curlFunction($headers, $data);
+                $response = json_decode($response, true);
+                if ($response && isset($response['success']) && $response['success'] == true) {
+                    $searchKeys = [
+                        'borrower_id' => $borrower->id,
+                        'currency' => 'NGN'
+                    ];
+
+                    $updateOrCreateData = [
+                        'company_id' => $borrower->company_id,
+                        'branch_id' => $borrower->branch_id,
+                        'borrower_id' => $borrower->id,
+                        'account_number' => $response['data']['accountNumber'],
+                        'account_name' => $response['data']['accountName'],
+                        'bank_name' => $response['data']['bank'],
+                        'status' => 'active',
+                        'available_balance' => 0,
+                        'ledger_balance' => 0,
+                        'currency' => 'NGN',
+                        'savings_product_id' => $savingsProduct ? $savingsProduct->id : 1,
+                    ];
+                    $table = DB::table('savings');
+                    $existingRecord = $table->where($searchKeys)->first();
+                    //if record already exist, update it. else create new record
+                    if ($existingRecord) {
+                        $table->where($searchKeys)->update($updateOrCreateData);
+                    } else {
+                        $insertData = array_merge($searchKeys, $updateOrCreateData);
+                        $table->insert($insertData);
+                    }
+
+                    // return $this->success($response['data'], 'Wallet created successfully', 200);
+                } else {
+                    $errorMessage .= $response['responseMessage'] ?? 'NGN Wallet creation failed. ';
+                }
+            }
+
+            //create usd wallet
+            $savingsProduct = DB::table('savings_products')->where("product_name", SavingsProduct::$usd)->first();
+
+            //check if customer already has a savings account
+            //usdc wallet
+            $savingWalletUsd = DB::table('savings')->where("borrower_id", $borrower->id)->where("currency", SavingsProduct::$usd)->first();
+
+            if ($savingWalletUsd && $savingWalletUsd->account_number != "") {
+                $errorMessage .= "NGN Wallet already exists. ";
+            }else {
+                //lets get routing number as wallet id
+                $walletId = "";
+                $bridgeResponse = $this->bridgeService->createUsdcWallet($borrower->bridge_customer_id);
+                if (empty($bridgeResponse)) {
+                    $errorMessage .= "Unable to create USD wallet";
+                }
+                $walletId = $bridgeResponse['id'];
+
+                $bridgeResponse = $this->bridgeService->createUsdWallet(
+                    [
+                        "wallet_id" => $walletId,
+                        "customer_id" => $borrower->bridge_customer_id,
+                        "developer_fee_percent" => $savingsProduct->developer_fee_percent
+                    ]
+                );
+                if (empty($bridgeResponse)) {
+                    $errorMessage .= "Unable to create USD wallet";
+                }else {
+                    DB::table('savings')
+                    ->where('id', $savingWalletUsd->id)
+                    ->update([
+                        'account_number' => $bridgeResponse['source_deposit_instructions']['bank_account_number'],
+                        'bank_name' => $bridgeResponse['source_deposit_instructions']['bank_name'],
+                        'routing_number' => $bridgeResponse['source_deposit_instructions']['bank_routing_number'],
+                        'account_name' => $bridgeResponse['source_deposit_instructions']['bank_beneficiary_name'],
+                        'bridge_id' => $bridgeResponse['id'],
+                    ]);
+                }
+
+            }
+
+            
+            //create usdc wallet
+            $savingWallet = DB::table('savings')->where("borrower_id", $borrower->id)->where("currency", SavingsProduct::$usdc)->first();
+
+            if ($savingWallet && $savingWallet->account_number != "") {
+                $errorMessage .= 'USDC Wallet already exists';
+            }else {
+                $bridgeResponse = $this->bridgeService->createUsdcWallet($borrower->bridge_customer_id);
+                if (empty($bridgeResponse)) {
+                    $errorMessage .= "Unable to create USDC wallet";
+                }else {
+                    DB::table('savings')
+                        ->where('id', $savingWallet->id)
+                        ->update([
+                            'account_number' => $bridgeResponse['address'],
+                            'bank_name' => 'ETH',
+                            'routing_number' => $bridgeResponse['id'], //wallet id
+                            'bridge_id' => $bridgeResponse['id'], //wallet id
+                            'account_name' => $borrower->full_name,
+                            "status" => "active"
+                        ]);
+                }
+            }
+            
+            DB::table('borrowers')->where('id', $borrower->id)->update(['wallet_created' => true]);
+            return response()->json([
+                'message' => 'Wallets Created.',
+                'errorMessage' => $errorMessage
+            ]);
+        } catch (\Throwable $th) {
+            //throw $th;
+             return response()->json([
+                'message' => $th->getMessage(),
+            ], 500);
+        }
+    }
 
 
     /**

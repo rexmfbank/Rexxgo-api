@@ -19,6 +19,7 @@ Route::middleware(['auth:borrower', 'throttle:10,1'])->group(function () {
         Route::get('/', [WalletController::class, 'Wallets'])->name('wallet.all');
         Route::get('/{accountNumber}/balance', [WalletController::class, 'getWalletbalance'])->name('wallet.balance');
         Route::middleware(['kyc'])->group(function () {
+            Route::post('/', [WalletController::class, 'createWallets'])->name('wallet.create');
             Route::post('/ngn', [WalletController::class, 'createNairaWallet'])->name('wallet.create-ngn');
             Route::post('/usd', [WalletController::class, 'createUsWallet'])->name('wallet.create-usd');
             Route::post('/usdc', [WalletController::class, 'createUsdcWallet'])->name('wallet.create-usdc');

@@ -456,7 +456,7 @@ class AuthController extends Controller
         //data should be access token and borrower details
         //login the borrower
         $token = auth('borrower')->login($borrower);
-
+         DB::table('borrowers')->where('id', $borrower->id)->update(['passcode_created' => true]);
         $data = [
             'borrower_id' => Crypt::encryptString($borrower->id),
             'phone'       => $borrower->phone,
@@ -506,6 +506,7 @@ class AuthController extends Controller
 
         $borrower->biometrics = $request->biometrics;
         $borrower->save();
+        DB::table('borrowers')->where('id', $borrower->id)->update(['biometrics_created' => true]);
 
         $data = [
             'email'       => $borrower->email,
@@ -563,7 +564,7 @@ class AuthController extends Controller
             'last_name'   => $borrower->last_name,
             'email'       => $borrower->email,
         ];
-
+        DB::table('borrowers')->where('id', $borrower->id)->update(['pin_created' => true]);
         return $this->success($data, 'PIN set successfully. Registration complete.');
     }
 

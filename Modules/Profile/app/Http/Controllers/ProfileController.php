@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Modules\Profile\app\Http\Resources\UserResource;
 use Modules\Wallet\Services\BridgeService; 
 
@@ -332,9 +333,94 @@ class ProfileController extends Controller
             "kyc_link" => $borrower->kyc_link,
             "tos_link" => $borrower->tos_link,
             'tos_status' => $borrower->tos_status,
+            'wallet_created' => $borrower->wallet_created,
             'rejection_reasons' => empty($borrower->rejection_reasons) ? [] : json_decode($borrower->rejection_reasons),
         ], 'KYC status retrieved successfully');
     }
+
+
+
+    /**
+     * @OA\Post(
+     *   path="/api/profile/passcode/reset",
+     *   tags={"Profile"},
+     *   summary="Reset passcode ",
+     *   security={{"bearerAuth":{}}},
+     *   @OA\RequestBody(
+     *     required=true,
+     *     @OA\JsonContent(
+     *       required={"old_passcode","passcode","passcode_confirmation"},
+     *       @OA\Property(property="old_passcode", type="string", example="123456"),
+     *       @OA\Property(property="passcode", type="string"),
+     *       @OA\Property(property="passcode_confirmation", type="string")
+     *     )
+     *   ),
+     *   @OA\Response(response=200, description="Reset"),
+     *   @OA\Response(response=400, description="Invalid OTP")
+     * )
+     */
+    public function resetPasscode(Request $request)
+    {
+        $request->validate([
+            'old_passcode'      => 'required|min:4',
+            'passcode' => 'required|min:4|confirmed',
+            'passcode_confirmation' => 'required|min:4',
+        ]);
+
+        $record = Borrower::find(auth()->guard('borrower')->user()->id);
+
+        if (!$record || !Hash::check($request->old_passcode, $record->password)) {
+            return $this->error('Invalid old passcode', 400);
+        }
+
+        $record->password = Hash::make($request->passcode);
+        $record->otp = null; // Clear OTP after successful reset
+        $record->save();
+
+        return $this->success('Passcode reset successfully');
+    }
+
+
+    /**
+     * @OA\Post(
+     *   path="/api/profile/pin/reset",
+     *   tags={"Profile"},
+     *   summary="Reset PIN ",
+     *   security={{"bearerAuth":{}}},
+     *   @OA\RequestBody(
+     *     required=true,
+     *     @OA\JsonContent(
+     *       required={"old_pin","pin","pin_confirmation"},
+     *       @OA\Property(property="old_pin", type="string", example="123456"),
+     *       @OA\Property(property="pin", type="string"),
+     *       @OA\Property(property="pin_confirmation", type="string")
+     *     )
+     *   ),
+     *   @OA\Response(response=200, description="Reset"),
+     *   @OA\Response(response=400, description="Invalid or expired OTP")
+     * )
+     */
+    public function resetPin(Request $request)
+    {
+        $request->validate([
+            'old_pin'      => 'required|min:4',
+            'pin' => 'required|min:4|confirmed',
+            'pin_confirmation' => 'required|min:4',
+        ]);
+
+        $record = Borrower::find(auth()->guard('borrower')->user()->id);
+
+        if (!$record || !Hash::check($request->old_pin, $record->pin)) {
+            return $this->error('Invalid old PIN', 400);
+        }
+
+        $record->pin = Hash::make($request->pin);
+        $record->otp = null; // Clear OTP after successful reset
+        $record->save();
+
+        return $this->success('Pin changed successfully');
+    }
+
 
     /**
      * Calculate profile completion percentage
