@@ -275,55 +275,127 @@ class BridgeWebhookController extends Controller
         $activityType = $event['event_object']['type'] ?? null;
         $amount = $event['event_object']['amount'] ?? 0;
         $customerId = $event['event_object']['customer_id'] ?? null;
-        $borrower = Borrower::where('bridge_customer_id', $customerId)->first();
+        
         $paymentId = $event['event_object']['id'] ?? null;
-        $deposit_id = $event['event_object']['deposit_id'] ?? null;
         $createdAt = $event['event_object']['created_at'] ?? null;
         $virtualAccountId = $event['event_object']['virtual_account_id'] ?? null;
+        
         $source = $event['event_object']['source'] ?? null;
-        $senderName = $source['sender_name'];
-        $description = $source['description'];
-        if($borrower){
-            $wallet = Savings::where('bridge_id', $virtualAccountId)->first();
-            $isExist = SavingsTransaction::where("external_tx_id", $paymentId)->first();
-            if ($activityType === 'payment_submitted') {
-                if($isExist) {
-                    throw new \RuntimeException("Payment already registered for payment {$paymentId}");
-                }
-                $carbonDate = \Carbon\Carbon::parse($createdAt);
-                $timeOnly = $carbonDate->format('H:i:s');
-                $dateOnly = $carbonDate->format('Y-m-d');
-                $reference = "REX-USD-".date("Ymdhsi").'-'.uniqid();
-                $transaction = SavingsTransaction::create([
-                    "reference" => $reference,
-                    "borrower_id" => $borrower->id,
-                    "savings_id" => $wallet->id,
-                    "transaction_amount" => $amount,
-                    "balance" => $wallet->available_balance + $amount,
-                    "transaction_date" => $dateOnly,
-                    "transaction_time" => $timeOnly,
-                    "transaction_type" => "credit",
-                    "transaction_description" => "Fund received from {$senderName} | {$description}",
-                    "credit" => $amount,
-                    "status_id" => "pending",
-                    "currency" => "USD",
-                    "external_response" => json_encode($event, JSON_PRETTY_PRINT),
-                    "external_tx_id" => $paymentId,
-                    "provider" => "bridge",
-                ]);
-                Log::info("💰 Wallet funded for Borrower #{$borrower->id} - with amount {$amount} USD, #{$transaction->id} currently pending");
-            }elseif ($activityType === 'funds_received') {
-                    if ($wallet) {
-                        $wallet->ledger_balance += $amount;
-                        $wallet->available_balance += $amount;
-                        $wallet->save();
-                        Log::info("💰 Wallet funded for Borrower #{$borrower->id} with amount {$amount} USD");
-                    }
-            } else {
-                Log::info("Virtual account activity: {$activityType} ({$amount} USD)");
+        $senderName = $source['sender_name'] ?? 'N/A';
+        $description = $source['description'] ?? 'N/A';
+        
+        $borrower = Borrower::where('bridge_customer_id', $customerId)->first();
+
+        if (!$borrower) {
+            Log::info("💰 {$paymentId} failed, borrower not found for customer ID {$customerId} with amount {$amount} USD");
+            return; 
+        }
+
+        $wallet = Savings::where('bridge_id', $virtualAccountId)->first();
+        if (!$wallet) {
+            Log::error("Wallet not found for Virtual Account ID: {$virtualAccountId} for Borrower #{$borrower->id}");
+            return; 
+        }
+
+        $transaction = SavingsTransaction::where("external_tx_id", $paymentId)->first();
+        
+        if (!$transaction && in_array($activityType, ['payment_submitted', 'funds_received', 'payment_processed', 'payment_failed', 'cancelled'])) {
+            $carbonDate = \Carbon\Carbon::parse($createdAt);
+            $timeOnly = $carbonDate->format('H:i:s');
+            $dateOnly = $carbonDate->format('Y-m-d');
+            $reference = "REX-USD-".date("Ymdhsi").'-'.uniqid();
+            
+            $initialStatus = ($activityType === 'funds_received' || $activityType === 'payment_processed') ? 'completed' : 
+                             (($activityType === 'payment_failed' || $activityType === 'cancelled') ? 'failed' : 'pending');
+            
+            $finalWalletBalance = $wallet->available_balance;
+            if ($initialStatus === 'completed') {
+                $finalWalletBalance += $amount;
             }
-        }else {
-            Log::info("💰 {$paymentId}  failed, borrower not found with amount {$amount} USD");
+            
+            $transaction = SavingsTransaction::create([
+                "reference" => $reference,
+                "borrower_id" => $borrower->id,
+                "savings_id" => $wallet->id,
+                "transaction_amount" => $amount,
+                "balance" => $finalWalletBalance, // <--- UPDATED: Use the calculated final balance
+                "transaction_date" => $dateOnly,
+                "transaction_time" => $timeOnly,
+                "transaction_type" => "credit",
+                "transaction_description" => "Deposit: {$activityType} from {$senderName} | {$description}",
+                "credit" => $amount,
+                "status_id" => $initialStatus,
+                "currency" => "USD",
+                "external_response" => json_encode($event, JSON_PRETTY_PRINT),
+                "external_tx_id" => $paymentId,
+                "provider" => "bridge",
+            ]);
+            
+            if ($initialStatus === 'completed') {
+                $wallet->increment('available_balance', $amount);
+                Log::info("✅ Wallet funding COMPLETE (MISSING WEBHOOK) for Borrower #{$borrower->id} - amount {$amount} USD. Balance updated to {$finalWalletBalance}.");
+            } else {
+                Log::info("💰 Wallet funding: New transaction created as {$initialStatus} for Borrower #{$borrower->id} due to missed previous event.");
+            }
+            return;
+        }
+        
+
+        if ($transaction) {
+            $currentStatus = $transaction->status_id;
+            $shouldUpdateWallet = false;
+            $newStatus = $currentStatus;
+
+            switch ($activityType) {
+                case 'payment_submitted':
+                    if ($currentStatus === 'pending') {
+                        Log::info("Payment submitted event received for {$paymentId}. Already pending. No change needed.");
+                    }
+                    break;
+
+                case 'funds_received':
+                case 'payment_processed':
+                    if ($currentStatus === 'pending') {
+                        $newStatus = 'completed';
+                        $shouldUpdateWallet = true; // Funds must be moved from pending to available
+                        Log::info("✅ Payment {$activityType} received for {$paymentId}. Finalizing from pending to completed.");
+                    } else if ($currentStatus === 'completed') {
+                        Log::warning("Payment {$activityType} received for {$paymentId}. Already completed. Idempotency check passed.");
+                    }
+                    break;
+                    
+                case 'payment_failed':
+                case 'cancelled':
+                    if ($currentStatus === 'pending') {
+                        $newStatus = 'failed';
+                        Log::warning("❌ Payment {$activityType} received for {$paymentId}. Changing from pending to failed.");
+                    } else if ($currentStatus === 'completed') {
+                        Log::error("🚨 Completed payment {$paymentId} received a {$activityType} event! Manual review required.");
+                    }
+                    break;
+
+                default:
+                    Log::info("Virtual account activity: Unhandled type {$activityType} for {$amount} USD.");
+                    break;
+            }
+
+            if ($newStatus !== $currentStatus) {
+                $updateData = [
+                    "status_id" => $newStatus,
+                    "external_response" => json_encode($event, JSON_PRETTY_PRINT),
+                    "data" => json_encode($event, JSON_PRETTY_PRINT),
+                ];
+                
+                if ($shouldUpdateWallet) {
+                    $finalWalletBalance = $wallet->available_balance + $amount;
+                    
+                    $updateData["balance"] = $finalWalletBalance; // <--- UPDATED: Sets the balance after this transaction
+                    
+                    $wallet->increment('available_balance', $amount);
+                }
+                
+                $transaction->update($updateData);
+            }
         }
     }
 }

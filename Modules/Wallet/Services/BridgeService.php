@@ -45,13 +45,27 @@ class BridgeService
         } catch (\Throwable $e) {
 
             Log::error('Failed to contact Bridge: ' . $e->getMessage());
+            throw new \RuntimeException('Failed to contact Bridge: ' . $e->getMessage());
+
         }
 
         if ($response->failed()) {
             $message = 'Bridge error: ' . $response->status();
             $body = $response->json();
             if (is_array($body)) {
-                $message .= ' ' . json_encode($body);
+                if(isset($body['existing_kyc_link'])){
+                    $existing = $body['existing_kyc_link'];
+                    return [
+                        "customer_id" => $existing['customer_id'],
+                        "kyc_link" => $existing['kyc_link'],
+                        "tos_link" => $existing['tos_link'],
+                        "kyc_status" => $existing['kyc_status'],
+                        "rejection_reasons" => $existing['rejection_reasons'],
+                        "tos_status" => $existing['tos_status'],
+                    ];
+                }else{
+                    $message .= ' ' . json_encode($body);
+                }
             } else {
                 $message .= ' ' . $response->body();
             }
