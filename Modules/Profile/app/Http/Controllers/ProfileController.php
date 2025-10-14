@@ -391,7 +391,7 @@ class ProfileController extends Controller
      *     required=true,
      *     @OA\JsonContent(
      *       required={"old_pin","pin","pin_confirmation"},
-     *       @OA\Property(property="old_pin", type="string", example="123456"),
+     *       @OA\Property(property="old_pin", type="string", example="1234"),
      *       @OA\Property(property="pin", type="string"),
      *       @OA\Property(property="pin_confirmation", type="string")
      *     )
@@ -403,9 +403,9 @@ class ProfileController extends Controller
     public function resetPin(Request $request)
     {
         $request->validate([
-            'old_pin'      => 'required|min:4',
-            'pin' => 'required|min:4|confirmed',
-            'pin_confirmation' => 'required|min:4',
+            'old_pin'      => 'required|digits:4',
+            'pin' => 'required|digits:4|confirmed',
+            'pin_confirmation' => 'required|digits:4',
         ]);
 
         $record = Borrower::find(auth()->guard('borrower')->user()->id);

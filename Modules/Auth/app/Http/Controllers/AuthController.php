@@ -541,8 +541,8 @@ class AuthController extends Controller
     {
         $request->validate([
             'email' => 'required|string|exists:borrowers,email',
-            'pin' => 'required|digits:6|confirmed', // uses pin_confirmation field
-            'pin_confirmation' => 'required|digits:6',
+            'pin' => 'required|digits:4|confirmed', // uses pin_confirmation field
+            'pin_confirmation' => 'required|digits:4',
         ]);
 
         $borrower = Borrower::where('email', $request->email)->first();
@@ -753,8 +753,8 @@ class AuthController extends Controller
         $request->validate([
             'email'    => 'required|email|exists:borrowers,email',
             'otp'      => 'required|numeric',
-            'pin' => 'required|min:4|confirmed',
-            'pin_confirmation' => 'required|min:4',
+            'pin' => 'required|digits:4|confirmed',
+            'pin_confirmation' => 'required|digits:4',
         ]);
 
         $record = Borrower::where('email', $request->email)->first();
