@@ -276,7 +276,7 @@ class BridgeWebhookController extends Controller
         $amount = $event['event_object']['amount'] ?? 0;
         $customerId = $event['event_object']['customer_id'] ?? null;
         
-        $paymentId = $event['event_object']['id'] ?? null;
+        $paymentId = $event['event_object']['deposit_id'] ?? null;
         $createdAt = $event['event_object']['created_at'] ?? null;
         $virtualAccountId = $event['event_object']['virtual_account_id'] ?? null;
         
@@ -355,7 +355,7 @@ class BridgeWebhookController extends Controller
 
                 case 'funds_received':
                 case 'payment_processed':
-                    if ($currentStatus === 'pending') {
+                    if ($currentStatus != 'completed') {
                         $newStatus = 'completed';
                         $shouldUpdateWallet = true; // Funds must be moved from pending to available
                         Log::info("✅ Payment {$activityType} received for {$paymentId}. Finalizing from pending to completed.");

@@ -113,7 +113,7 @@ class WalletController extends Controller
             }
 
             $savingsProduct = DB::table('savings_products')->where("product_name", SavingsProduct::$ngn)->first();
-
+            $isCreateWallet = true;
             //check if customer already has a savings account
             $wallet = DB::table('savings')->where("borrower_id", $borrower->id)->where("currency", SavingsProduct::$ngn)->first();
 
@@ -172,6 +172,7 @@ class WalletController extends Controller
 
                     // return $this->success($response['data'], 'Wallet created successfully', 200);
                 } else {
+                    $isCreateWallet = false;
                     $errorMessage .= $response['responseMessage'] ?? 'NGN Wallet creation failed. ';
                 }
             }
@@ -184,12 +185,13 @@ class WalletController extends Controller
             $savingWalletUsd = DB::table('savings')->where("borrower_id", $borrower->id)->where("currency", SavingsProduct::$usd)->first();
 
             if ($savingWalletUsd && $savingWalletUsd->account_number != "") {
-                $errorMessage .= "NGN Wallet already exists. ";
+                $errorMessage .= "USD Wallet already exists. ";
             }else {
                 //lets get routing number as wallet id
                 $walletId = "";
                 $bridgeResponse = $this->bridgeService->createUsdcWallet($borrower->bridge_customer_id);
                 if (empty($bridgeResponse)) {
+                    $isCreateWallet = false;
                     $errorMessage .= "Unable to create USD wallet";
                 }
                 $walletId = $bridgeResponse['id'];
@@ -203,6 +205,7 @@ class WalletController extends Controller
                 );
                 if (empty($bridgeResponse)) {
                     $errorMessage .= "Unable to create USD wallet";
+                    $isCreateWallet = false;
                 }else {
                     DB::table('savings')
                     ->where('id', $savingWalletUsd->id)
@@ -227,6 +230,8 @@ class WalletController extends Controller
                 $bridgeResponse = $this->bridgeService->createUsdcWallet($borrower->bridge_customer_id);
                 if (empty($bridgeResponse)) {
                     $errorMessage .= "Unable to create USDC wallet";
+                    $isCreateWallet = false;
+
                 }else {
                     DB::table('savings')
                         ->where('id', $savingWallet->id)
@@ -240,16 +245,19 @@ class WalletController extends Controller
                         ]);
                 }
             }
-            
-            DB::table('borrowers')->where('id', $borrower->id)->update(['wallet_created' => true]);
+            if($isCreateWallet){
+                DB::table('borrowers')->where('id', $borrower->id)->update(['wallet_created' => true]);
+            }
+            $status = $isCreateWallet ? 200 : 400;
             return response()->json([
                 'message' => 'Wallets Created.',
                 'errorMessage' => $errorMessage
-            ]);
+            ], $status);
         } catch (\Throwable $th) {
             //throw $th;
              return response()->json([
                 'message' => $th->getMessage(),
+                'status' => false
             ], 500);
         }
     }
