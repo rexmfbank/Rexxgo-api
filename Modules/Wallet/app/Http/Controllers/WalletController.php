@@ -250,7 +250,7 @@ class WalletController extends Controller
             }
             $status = $isCreateWallet ? 200 : 400;
             return response()->json([
-                'message' => 'Wallets Created.',
+                'message' => $status == 200 ? 'Wallets Created.' : $errorMessage,
                 'errorMessage' => $errorMessage
             ], $status);
         } catch (\Throwable $th) {
