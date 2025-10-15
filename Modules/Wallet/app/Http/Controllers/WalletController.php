@@ -117,65 +117,65 @@ class WalletController extends Controller
             //check if customer already has a savings account
             $wallet = DB::table('savings')->where("borrower_id", $borrower->id)->where("currency", SavingsProduct::$ngn)->first();
 
-            if ($wallet && $wallet->account_number != "") {
-                $errorMessage .= "NGN Wallet already exists. ";
-            }else {
-                 $data = [
-                    "firstName"   => $borrower->first_name,
-                    "lastName"    => $borrower->last_name,
-                    "email"       => $borrower->email, //horphy2@gmail.com
-                    "phoneNumber" => $borrower->phone,
-                ];
+            // if ($wallet && $wallet->account_number != "") {
+            //     $errorMessage .= "NGN Wallet already exists. ";
+            // }else {
+            //      $data = [
+            //         "firstName"   => $borrower->first_name,
+            //         "lastName"    => $borrower->last_name,
+            //         "email"       => $borrower->email, //horphy2@gmail.com
+            //         "phoneNumber" => $borrower->phone,
+            //     ];
 
-                // Merge into request
-                $request->merge($data);
+            //     // Merge into request
+            //     $request->merge($data);
 
-                // Validate request
-                $request->validate([
-                    'firstName'   => 'required|string|max:50',
-                    'lastName'    => 'required|string|max:50',
-                    'email'       => 'required|email|max:100',
-                    'phoneNumber' => 'required|string|min:11|max:15',
-                ]);
+            //     // Validate request
+            //     $request->validate([
+            //         'firstName'   => 'required|string|max:50',
+            //         'lastName'    => 'required|string|max:50',
+            //         'email'       => 'required|email|max:100',
+            //         'phoneNumber' => 'required|string|min:11|max:15',
+            //     ]);
 
 
-                $response = $this->curlFunction($headers, $data);
-                $response = json_decode($response, true);
-                if ($response && isset($response['success']) && $response['success'] == true) {
-                    $searchKeys = [
-                        'borrower_id' => $borrower->id,
-                        'currency' => 'NGN'
-                    ];
+            //     $response = $this->curlFunction($headers, $data);
+            //     $response = json_decode($response, true);
+            //     if ($response && isset($response['success']) && $response['success'] == true) {
+            //         $searchKeys = [
+            //             'borrower_id' => $borrower->id,
+            //             'currency' => 'NGN'
+            //         ];
 
-                    $updateOrCreateData = [
-                        'company_id' => $borrower->company_id,
-                        'branch_id' => $borrower->branch_id,
-                        'borrower_id' => $borrower->id,
-                        'account_number' => $response['data']['accountNumber'],
-                        'account_name' => $response['data']['accountName'],
-                        'bank_name' => $response['data']['bank'],
-                        'status' => 'active',
-                        'available_balance' => 0,
-                        'ledger_balance' => 0,
-                        'currency' => 'NGN',
-                        'savings_product_id' => $savingsProduct ? $savingsProduct->id : 1,
-                    ];
-                    $table = DB::table('savings');
-                    $existingRecord = $table->where($searchKeys)->first();
-                    //if record already exist, update it. else create new record
-                    if ($existingRecord) {
-                        $table->where($searchKeys)->update($updateOrCreateData);
-                    } else {
-                        $insertData = array_merge($searchKeys, $updateOrCreateData);
-                        $table->insert($insertData);
-                    }
+            //         $updateOrCreateData = [
+            //             'company_id' => $borrower->company_id,
+            //             'branch_id' => $borrower->branch_id,
+            //             'borrower_id' => $borrower->id,
+            //             'account_number' => $response['data']['accountNumber'],
+            //             'account_name' => $response['data']['accountName'],
+            //             'bank_name' => $response['data']['bank'],
+            //             'status' => 'active',
+            //             'available_balance' => 0,
+            //             'ledger_balance' => 0,
+            //             'currency' => 'NGN',
+            //             'savings_product_id' => $savingsProduct ? $savingsProduct->id : 1,
+            //         ];
+            //         $table = DB::table('savings');
+            //         $existingRecord = $table->where($searchKeys)->first();
+            //         //if record already exist, update it. else create new record
+            //         if ($existingRecord) {
+            //             $table->where($searchKeys)->update($updateOrCreateData);
+            //         } else {
+            //             $insertData = array_merge($searchKeys, $updateOrCreateData);
+            //             $table->insert($insertData);
+            //         }
 
-                    // return $this->success($response['data'], 'Wallet created successfully', 200);
-                } else {
-                    $isCreateWallet = false;
-                    $errorMessage .= $response['responseMessage'] ?? 'NGN Wallet creation failed. ';
-                }
-            }
+            //         // return $this->success($response['data'], 'Wallet created successfully', 200);
+            //     } else {
+            //         $isCreateWallet = false;
+            //         $errorMessage .= $response['responseMessage'] ?? 'NGN Wallet creation failed. ';
+            //     }
+            // }
 
             //create usd wallet
             $savingsProduct = DB::table('savings_products')->where("product_name", SavingsProduct::$usd)->first();
@@ -500,6 +500,80 @@ class WalletController extends Controller
                 'message' => 'Server Error: ' . $e->getMessage(),
             ], 500);
         }
+    }
+
+
+    /**
+     * @OA\Post(
+     *   path="/api/wallets/transfer/usd-usd",
+     *   tags={"Wallet"},
+     *   summary="Transfer from USD to USD",
+     *   security={{"bearerAuth":{}}},
+     *   @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"amount", "routing_number", "account_holder_name", "account_number", "account_type"},
+     *             @OA\Property(property="amount", type="number", format="float", example=100.50),
+     *             @OA\Property(property="routing_number", type="string", example="0000000"),
+     *             @OA\Property(property="account_holder_name", type="string", example="Don Carlo"),
+     *             @OA\Property(property="account_number", type="string", example="1234567890"),
+     *             @OA\Property(property="account_type", type="string", example="checking")
+     *         )
+     *    ),
+     *   @OA\Response(response=200, description="Created"),
+     *   @OA\Response(response=400, description="Bad Request"),
+     *   @OA\Response(response=401, description="Unauthorized")
+     * )
+     */
+    public function usdToUsd(Request $request)
+    {
+        $data = $request->validate([
+            'amount' => 'required|numeric|min:1',
+            'account_number' => 'required|string',
+            'routing_number' => 'required|string',
+            'account_holder_name' => 'required|string',
+            'account_type' => 'required|string|in:checking,savings',
+        ]);
+
+        if (!auth()->guard('borrower')->check()) {
+            return $this->error('Invalid access token, Please Login', 401);
+        }
+        $borrower = Borrower::find(auth()->guard('borrower')->user()->id);
+        if (!$borrower) {
+            return $this->error('Customer not found!', 400);
+        }
+        $usdWallet = DB::table('savings')->where("borrower_id", $borrower->id)->where("currency", SavingsProduct::$usd)->first();
+        if (!$usdWallet) {
+            return $this->error('USD Wallet not found!', 400);
+        }
+        if ($usdWallet->available_balance < $data['amount']) {
+            return $this->error('Insufficient balance!', 400);
+        }
+        if (!$usdWallet->bridge_id) {
+            return $this->error('USD Wallet not linked!', 400);
+        }
+        $walletId = $usdWallet->bridge_id; 
+
+        $onBehalfOf = $borrower->bridge_customer_id;
+
+        $result = $this->bridgeService->transferUsdToBank(
+            $walletId,
+            $data['amount'],
+            $data,
+            $onBehalfOf
+        );
+
+        if (!$result['success']) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $result['error']['message' ?? 'Transfer failed'],
+            ], $result['status']);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $result['data'],
+        ]);
     }
 
     //write a GET curl function to get wallet balance

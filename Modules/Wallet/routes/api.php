@@ -23,6 +23,7 @@ Route::middleware(['auth:borrower', 'throttle:10,1'])->group(function () {
             Route::post('/ngn', [WalletController::class, 'createNairaWallet'])->name('wallet.create-ngn');
             Route::post('/usd', [WalletController::class, 'createUsWallet'])->name('wallet.create-usd');
             Route::post('/usdc', [WalletController::class, 'createUsdcWallet'])->name('wallet.create-usdc');
+            Route::post('/transfer/usd-usd', [WalletController::class, 'usdToUsd'])->name('wallet.usd-usd');
             
         });
     });

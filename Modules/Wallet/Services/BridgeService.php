@@ -147,7 +147,6 @@ class BridgeService
         $baseUrl = rtrim(env('BRIDGE_BASE_URL', 'https://api.bridge.xyz'), '/');
         $apiKey = env('BRIDGE_API_KEY');
         $idempotencyKey = (string)\Illuminate\Support\Str::uuid();
-        info("{$baseUrl}/v0/customers/{$customerId}/wallets");
         $payload = [
             'currency' => 'usdc',
             'chain' => 'ethereum',
@@ -167,5 +166,70 @@ class BridgeService
         }
 
         return $response->json();
+    }
+
+
+
+        /**
+     * Transfer USD from a Bridge wallet to an external USD bank account.
+     *
+     * @param string $walletId Bridge virtual wallet ID (source)
+     * @param float $amount Amount in USD
+     * @param array $destinationBank [
+     *   'account_number' => string,
+     *   'routing_number' => string,
+     *   'account_holder_name' => string,
+     *   'account_type' => checking|savings
+     * ]
+     * @param string|null $onBehalfOf Optional Bridge customer ID
+     * @return array Bridge API response
+     */
+    public function transferUsdToBank(string $walletId, float $amount, array $destinationBank, ?string $onBehalfOf = null): array
+    {
+        $payload = [
+            'amount' => number_format($amount, 2, '.', ''),
+            'source' => [
+                'payment_rail' => 'usd_wallet',
+                'currency' => 'usd',
+                'account_id' => $walletId,
+            ],
+            'destination' => [
+                'payment_rail' => 'usd_bank',
+                'currency' => 'usd',
+                'account_details' => [
+                    'account_number' => $destinationBank['account_number'],
+                    'routing_number' => $destinationBank['routing_number'],
+                    'account_holder_name' => $destinationBank['account_holder_name'],
+                    'account_type' => $destinationBank['account_type'],
+                ],
+            ],
+        ];
+
+        if ($onBehalfOf) {
+            $payload['on_behalf_of'] = $onBehalfOf;
+        }
+
+        $idempotencyKey = (string) Str::uuid();
+        $baseUrl = rtrim(env('BRIDGE_BASE_URL', 'https://api.bridge.xyz'), '/');
+        $apiKey = env('BRIDGE_API_KEY');
+
+        $response = Http::withHeaders([
+            'Api-Key' => $apiKey,
+            'Idempotency-Key' => $idempotencyKey,
+            'Content-Type' => 'application/json',
+        ])->post("{$baseUrl}/transfers", $payload);
+
+        if (!$response->successful()) {
+            Log::error('Bridge transfer error: ' . $response->body(). '-' . 'api kye ' . $apiKey);
+            return [
+                'success' => false,
+                'status' => $response->status(),
+                'error' => $response->json(),
+            ];
+        }
+        return [
+            'success' => true,
+            'data' => $response->json(),
+        ];
     }
 }

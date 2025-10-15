@@ -857,7 +857,7 @@
                                 "properties": {
                                     "old_pin": {
                                         "type": "string",
-                                        "example": "123456"
+                                        "example": "1234"
                                     },
                                     "pin": {
                                         "type": "string"
@@ -1026,6 +1026,71 @@
                 ],
                 "summary": "Create USDC wallet",
                 "operationId": "7a161a6ab11e01c45535cd25195f1c84",
+                "responses": {
+                    "200": {
+                        "description": "Created"
+                    },
+                    "400": {
+                        "description": "Bad Request"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/wallets/transfer/usd-usd": {
+            "post": {
+                "tags": [
+                    "Wallet"
+                ],
+                "summary": "Transfer from USD to USD",
+                "operationId": "1b7c5da9de90b31e790b52bcd2cb3349",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "amount",
+                                    "routing_number",
+                                    "account_holder_name",
+                                    "account_number",
+                                    "account_type"
+                                ],
+                                "properties": {
+                                    "amount": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 100.5
+                                    },
+                                    "routing_number": {
+                                        "type": "string",
+                                        "example": "0000000"
+                                    },
+                                    "account_holder_name": {
+                                        "type": "string",
+                                        "example": "Don Carlo"
+                                    },
+                                    "account_number": {
+                                        "type": "string",
+                                        "example": "1234567890"
+                                    },
+                                    "account_type": {
+                                        "type": "string",
+                                        "example": "checking"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
                 "responses": {
                     "200": {
                         "description": "Created"
