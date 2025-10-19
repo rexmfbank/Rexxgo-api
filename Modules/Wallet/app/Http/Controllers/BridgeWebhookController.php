@@ -10,6 +10,7 @@ use App\Models\UsdWalletQueue;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Modules\Notification\app\Http\Controllers\NotificationController;
 
 class BridgeWebhookController extends Controller
 {
@@ -49,6 +50,7 @@ class BridgeWebhookController extends Controller
                 'error' => $e->getMessage(),
             ], 400);
         } catch (\Exception $e) {
+            Log::error('Failed to process webhook event:', ['error' => $e->getMessage()]);
             return response()->json(['error' => 'Invalid JSON'], 400);
         }
     }
@@ -279,7 +281,12 @@ class BridgeWebhookController extends Controller
         $paymentId = $event['event_object']['deposit_id'] ?? null;
         $createdAt = $event['event_object']['created_at'] ?? null;
         $virtualAccountId = $event['event_object']['virtual_account_id'] ?? null;
-        
+         $wallet = Savings::where('bridge_id', $virtualAccountId)->first();
+        if (!$wallet) {
+            Log::error("Wallet not found for Virtual Account ID: {$virtualAccountId}");
+            return; 
+        }
+
         $source = $event['event_object']['source'] ?? null;
         $senderName = $source['sender_name'] ?? 'N/A';
         $description = $source['description'] ?? 'N/A';
@@ -311,6 +318,8 @@ class BridgeWebhookController extends Controller
             $finalWalletBalance = $wallet->available_balance;
             if ($initialStatus === 'completed') {
                 $finalWalletBalance += $amount;
+            }else {
+
             }
             
             $transaction = SavingsTransaction::create([
@@ -318,11 +327,11 @@ class BridgeWebhookController extends Controller
                 "borrower_id" => $borrower->id,
                 "savings_id" => $wallet->id,
                 "transaction_amount" => $amount,
-                "balance" => $finalWalletBalance, // <--- UPDATED: Use the calculated final balance
+                "balance" => $finalWalletBalance,
                 "transaction_date" => $dateOnly,
                 "transaction_time" => $timeOnly,
                 "transaction_type" => "credit",
-                "transaction_description" => "Deposit: {$activityType} from {$senderName} | {$description}",
+                "transaction_description" => "Deposit: from {$senderName} | {$description}",
                 "credit" => $amount,
                 "status_id" => $initialStatus,
                 "currency" => "USD",
@@ -331,8 +340,24 @@ class BridgeWebhookController extends Controller
                 "provider" => "bridge",
             ]);
             
+            
             if ($initialStatus === 'completed') {
                 $wallet->increment('available_balance', $amount);
+                $notificationMessage = 'You just recieved USD '.$amount.' from '.$senderName.'.';
+                $notificationController = new NotificationController();
+                $notificationRequest = [
+                    'type' => 'transaction',
+                    'notifiable_type' => 'transaction',
+                    'borrower_id' => $borrower->id,
+                    'data' => [
+                        'message' => $notificationMessage,
+                        'data' => $transaction,
+                    ],
+                    'company_id' => null,
+                    'branch_id' => null,
+                ];
+
+                $notificationController->createNotification($notificationRequest);
                 Log::info("✅ Wallet funding COMPLETE (MISSING WEBHOOK) for Borrower #{$borrower->id} - amount {$amount} USD. Balance updated to {$finalWalletBalance}.");
             } else {
                 Log::info("💰 Wallet funding: New transaction created as {$initialStatus} for Borrower #{$borrower->id} due to missed previous event.");
@@ -358,9 +383,24 @@ class BridgeWebhookController extends Controller
                     if ($currentStatus != 'completed') {
                         $newStatus = 'completed';
                         $shouldUpdateWallet = true; // Funds must be moved from pending to available
+                        $notificationMessage = 'You just recieved USD '.$amount.' from '.$senderName.'.';
+                        $notificationController = new NotificationController();
+                        $notificationRequest = [
+                            'type' => 'transaction',
+                            'notifiable_type' => 'transaction',
+                            'borrower_id' => $borrower->id,
+                            'data' => [
+                                'message' => $notificationMessage,
+                                'data' => $transaction,
+                            ],
+                            'company_id' => null,
+                            'branch_id' => null,
+                        ];
+
+                        $notificationController->createNotification($notificationRequest);
                         Log::info("✅ Payment {$activityType} received for {$paymentId}. Finalizing from pending to completed.");
                     } else if ($currentStatus === 'completed') {
-                        Log::warning("Payment {$activityType} received for {$paymentId}. Already completed. Idempotency check passed.");
+                        Log::warning("Payment already {$activityType} received for {$paymentId}. Already completed. Idempotency check passed.");
                     }
                     break;
                     

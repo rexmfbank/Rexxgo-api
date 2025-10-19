@@ -14,10 +14,10 @@ class Savings extends Model
     
     protected $guarded = ['id'];
 
-    protected static function booted()
-    {
-        static::addGlobalScope(new CompanyScope);
-    }
+    // protected static function booted()
+    // {
+    //     static::addGlobalScope(new CompanyScope);
+    // }
 
     public function borrower()
     {

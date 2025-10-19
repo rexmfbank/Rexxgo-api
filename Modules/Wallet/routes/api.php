@@ -17,6 +17,7 @@ use Modules\Wallet\app\Http\Controllers\WalletController;
 Route::middleware(['auth:borrower', 'throttle:10,1'])->group(function () {
     Route::prefix('wallets')->group(function () {
         Route::get('/', [WalletController::class, 'Wallets'])->name('wallet.all');
+        Route::get('/transactions', [WalletController::class, 'Transactions'])->name('wallet.transactions');
         Route::get('/{accountNumber}/balance', [WalletController::class, 'getWalletbalance'])->name('wallet.balance');
         Route::middleware(['kyc'])->group(function () {
             Route::post('/', [WalletController::class, 'createWallets'])->name('wallet.create');

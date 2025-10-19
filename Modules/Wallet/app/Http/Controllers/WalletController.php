@@ -6,12 +6,14 @@ use App\Http\Controllers\Controller;
 use App\Models\Borrower;
 use App\Models\Savings;
 use App\Models\SavingsProduct;
+use App\Models\SavingsTransaction;
 use App\Models\UsdWalletQueue;
 use Illuminate\Http\Request;
 use App\Traits\ApiResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Modules\Wallet\app\Http\Resources\WalletResource;
+use Modules\Wallet\app\Http\Resources\TransactionResource;
 use Modules\Wallet\Services\BridgeService;
 
 class WalletController extends Controller
@@ -42,6 +44,51 @@ class WalletController extends Controller
         $wallets = DB::table('savings')->where("borrower_id", auth()->guard('borrower')->user()->id)->get();
         $wallets = WalletResource::collection($wallets);
         return $this->success($wallets, 'Wallets retrieved successfully', 200);
+    }
+
+    /**
+     * @OA\Get(
+     * path="/api/wallets/transactions",
+     * tags={"Wallet"},
+     * summary="Get all transactions",
+     * security={{"bearerAuth":{}}},
+     * @OA\Parameter(
+     * name="page",
+     * in="query",
+     * description="The page number to retrieve.",
+     * required=false,
+     * @OA\Schema(type="integer", default=1)
+     * ),
+     * @OA\Parameter(
+     * name="pageSize",
+     * in="query",
+     * description="The number of transactions to return per page.",
+     * required=false,
+     * @OA\Schema(type="integer", default=15)
+     * ),
+     * @OA\Response(response=200, description="Success"),
+     * @OA\Response(response=400, description="Bad Request"),
+     * @OA\Response(response=401, description="Unauthorized")
+     * )
+     */
+    public function Transactions(Request $request)
+    {
+        $borrowerId = auth()->guard('borrower')->user()->id;
+        $perPage = $request->query('pageSize', 15);
+        $transactions = SavingsTransaction::with("savings")->where("borrower_id", $borrowerId)->paginate($perPage);
+        $paginatedResource = TransactionResource::collection($transactions);
+
+        $meta = [
+            'current_page' => $transactions->currentPage(),
+            'total_pages'  => $transactions->lastPage(),
+            'total_items'  => $transactions->total(),
+            'per_page'     => $transactions->perPage(),
+        ];
+
+        return $this->success([
+            'items' => $paginatedResource,
+            'meta' => $meta,
+        ], 'Transactions retrieved successfully', 200);
     }
 
     /**
@@ -186,7 +233,7 @@ class WalletController extends Controller
 
             if ($savingWalletUsd && $savingWalletUsd->account_number != "") {
                 $errorMessage .= "USD Wallet already exists. ";
-            }else {
+            } else {
                 //lets get routing number as wallet id
                 $walletId = "";
                 $bridgeResponse = $this->bridgeService->createUsdcWallet($borrower->bridge_customer_id);
@@ -206,33 +253,31 @@ class WalletController extends Controller
                 if (empty($bridgeResponse)) {
                     $errorMessage .= "Unable to create USD wallet";
                     $isCreateWallet = false;
-                }else {
+                } else {
                     DB::table('savings')
-                    ->where('id', $savingWalletUsd->id)
-                    ->update([
-                        'account_number' => $bridgeResponse['source_deposit_instructions']['bank_account_number'],
-                        'bank_name' => $bridgeResponse['source_deposit_instructions']['bank_name'],
-                        'routing_number' => $bridgeResponse['source_deposit_instructions']['bank_routing_number'],
-                        'account_name' => $bridgeResponse['source_deposit_instructions']['bank_beneficiary_name'],
-                        'bridge_id' => $bridgeResponse['id'],
-                    ]);
+                        ->where('id', $savingWalletUsd->id)
+                        ->update([
+                            'account_number' => $bridgeResponse['source_deposit_instructions']['bank_account_number'],
+                            'bank_name' => $bridgeResponse['source_deposit_instructions']['bank_name'],
+                            'routing_number' => $bridgeResponse['source_deposit_instructions']['bank_routing_number'],
+                            'account_name' => $bridgeResponse['source_deposit_instructions']['bank_beneficiary_name'],
+                            'bridge_id' => $bridgeResponse['id'],
+                        ]);
                 }
-
             }
 
-            
+
             //create usdc wallet
             $savingWallet = DB::table('savings')->where("borrower_id", $borrower->id)->where("currency", SavingsProduct::$usdc)->first();
 
             if ($savingWallet && $savingWallet->account_number != "") {
                 $errorMessage .= 'USDC Wallet already exists';
-            }else {
+            } else {
                 $bridgeResponse = $this->bridgeService->createUsdcWallet($borrower->bridge_customer_id);
                 if (empty($bridgeResponse)) {
                     $errorMessage .= "Unable to create USDC wallet";
                     $isCreateWallet = false;
-
-                }else {
+                } else {
                     DB::table('savings')
                         ->where('id', $savingWallet->id)
                         ->update([
@@ -245,7 +290,7 @@ class WalletController extends Controller
                         ]);
                 }
             }
-            if($isCreateWallet){
+            if ($isCreateWallet) {
                 DB::table('borrowers')->where('id', $borrower->id)->update(['wallet_created' => true]);
             }
             $status = $isCreateWallet ? 200 : 400;
@@ -255,7 +300,7 @@ class WalletController extends Controller
             ], $status);
         } catch (\Throwable $th) {
             //throw $th;
-             return response()->json([
+            return response()->json([
                 'message' => $th->getMessage(),
                 'status' => false
             ], 500);
@@ -552,7 +597,7 @@ class WalletController extends Controller
         if (!$usdWallet->bridge_id) {
             return $this->error('USD Wallet not linked!', 400);
         }
-        $walletId = $usdWallet->bridge_id; 
+        $walletId = $usdWallet->bridge_id;
 
         $onBehalfOf = $borrower->bridge_customer_id;
 
