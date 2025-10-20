@@ -2,6 +2,7 @@
 
 namespace Modules\Wallet\Services;
 
+use App\Models\SavingsTransaction;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -46,14 +47,13 @@ class BridgeService
 
             Log::error('Failed to contact Bridge: ' . $e->getMessage());
             throw new \RuntimeException('Failed to contact Bridge: ' . $e->getMessage());
-
         }
 
         if ($response->failed()) {
             $message = 'Bridge error: ' . $response->status();
             $body = $response->json();
             if (is_array($body)) {
-                if(isset($body['existing_kyc_link'])){
+                if (isset($body['existing_kyc_link'])) {
                     $existing = $body['existing_kyc_link'];
                     return [
                         "customer_id" => $existing['customer_id'],
@@ -63,7 +63,7 @@ class BridgeService
                         "rejection_reasons" => $existing['rejection_reasons'],
                         "tos_status" => $existing['tos_status'],
                     ];
-                }else{
+                } else {
                     $message .= ' ' . json_encode($body);
                 }
             } else {
@@ -90,14 +90,14 @@ class BridgeService
      */
     public function createUsdWallet(array $data): ?array
     {
-        Log::info("Payload: ".json_encode($data));
+        Log::info("Payload: " . json_encode($data));
         $customerId = $data['customer_id'] ?? null;
 
         if (!$customerId) {
             throw new \InvalidArgumentException('customer_id is required.');
         }
 
-       $payload = [
+        $payload = [
             'developer_fee_percent' => $data['developer_fee_percent'] ?? '0',
             'source' => [
                 'currency' => 'usd',
@@ -170,7 +170,7 @@ class BridgeService
 
 
 
-        /**
+    /**
      * Transfer USD from a Bridge wallet to an external USD bank account.
      *
      * @param string $walletId Bridge virtual wallet ID (source)
@@ -220,7 +220,7 @@ class BridgeService
         ])->post("{$baseUrl}/transfers", $payload);
 
         if (!$response->successful()) {
-            Log::error('Bridge transfer error: ' . $response->body(). '-' . 'api kye ' . $apiKey);
+            Log::error('Bridge transfer error: ' . $response->body() . '-' . 'api kye ' . $apiKey);
             return [
                 'success' => false,
                 'status' => $response->status(),
@@ -231,5 +231,43 @@ class BridgeService
             'success' => true,
             'data' => $response->json(),
         ];
+    }
+
+
+
+    public function transferUsdcToUsd(string $customerId, string $walletId, string $virtualAccountId, float $amount)
+    {
+        $baseUrl = rtrim(env('BRIDGE_BASE_URL', 'https://api.bridge.xyz'), '/');
+        $apiKey = env('BRIDGE_API_KEY');
+        $idempotencyKey = (string)\Illuminate\Support\Str::uuid();
+
+        $payload = [
+            'source' => [
+                'payment_rail' => 'bridge_wallet',
+                'bridge_wallet_id' => $walletId,
+            ],
+            'destination' => [
+                'payment_rail' => 'virtual_account',
+                'virtual_account_id' => $virtualAccountId,
+            ],
+            'amount' => (string)$amount,
+            'currency' => 'usd',
+        ];
+
+        $response = \Illuminate\Support\Facades\Http::withHeaders([
+            'Api-Key' => $apiKey,
+            'Idempotency-Key' => $idempotencyKey,
+        ])->acceptJson()
+            ->post("{$baseUrl}/v0/transfers", $payload);
+
+        if ($response->failed()) {
+            $body = $response->json();
+            Log::error("Bridge transfer error", $body);
+            throw new \RuntimeException("Bridge transfer error: " . ($body['message'] ?? 'unknown'));
+        }
+
+        $data = $response->json();
+
+        return $data;
     }
 }

@@ -1267,6 +1267,60 @@
                     }
                 ]
             }
+        },
+        "/api/wallets/transfer": {
+            "post": {
+                "tags": [
+                    "Wallet"
+                ],
+                "summary": "Transfer funds between wallets",
+                "operationId": "dc40553a6557c991efd105dd149da4fe",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "source_wallet_id",
+                                    "destination_wallet_id",
+                                    "amount"
+                                ],
+                                "properties": {
+                                    "source_wallet_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "destination_wallet_id": {
+                                        "type": "integer",
+                                        "example": 2
+                                    },
+                                    "amount": {
+                                        "type": "number",
+                                        "example": 50
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Transfer initiated successfully"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
         }
     },
     "components": {

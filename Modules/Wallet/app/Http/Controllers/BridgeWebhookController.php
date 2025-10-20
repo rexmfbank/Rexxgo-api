@@ -115,6 +115,7 @@ class BridgeWebhookController extends Controller
         $category = $event['event_category'] ?? 'unknown';
         $objectId = $event['event_object']['id'] ?? 'N/A';
         $status = $event['event_object']['status'] ?? null;
+        Log::info("Webhook received: Category: {$category}, Type: {$eventType}, ID: {$objectId}");
         switch ($category) {
             case 'customer':
                 switch ($eventType) {
@@ -133,14 +134,6 @@ class BridgeWebhookController extends Controller
 
             case 'kyc_link':
                 $this->handleKycEvent($event);
-                break;
-
-            case 'transfer':
-                if ($eventType === 'transfer.updated.status_transitioned') {
-                    Log::info("Transfer status changed to: {$status} for ID: {$objectId}");
-                } else {
-                    Log::info("Transfer event: Transfer {$eventType}, ID: {$objectId}");
-                }
                 break;
 
             case 'card_transaction':
@@ -169,8 +162,18 @@ class BridgeWebhookController extends Controller
             case 'virtual_account.activity':
             case 'virtual_account.activity.created':
             case 'virtual_account.activity.updated':
+                Log::info("is it entering here");
                 $this->handleVirtualAccountActivities($event);
                 // Logic for virtual account activity
+                break;
+            case 'wallet.activity.created':
+            case 'wallet.activity.updated':
+            case 'wallet.transfer.completed':
+            case 'transfer':
+            case 'transfer.updated':
+            case 'transfer.completed':
+            case 'wallet.transfer.failed':
+                $this->handleWalletActivities($event);
                 break;
             case 'card_account':
                 // Logic for card account lifecycle
@@ -231,45 +234,45 @@ class BridgeWebhookController extends Controller
         }
     }
 
-    private function handleKycEvent(array $event): void 
+    private function handleKycEvent(array $event): void
     {
-         $eventType = $event['event_type'] ?? 'unknown';
+        $eventType = $event['event_type'] ?? 'unknown';
         $objectId = $event['event_object']['id'] ?? 'N/A';
         $status = $event['event_object']['status'] ?? null;
 
         if ($eventType === 'kyc_link.updated.status_transitioned') {
-                    Log::info("KYC Link status changed to: {$status} for ID: {$objectId}");
-                } else {
-                    Log::info("KYC Link event: Link {$eventType}, ID: {$objectId}");
-                }
-                $borrower = Borrower::where("email", $event['event_object']['email'])->first();
+            Log::info("KYC Link status changed to: {$status} for ID: {$objectId}");
+        } else {
+            Log::info("KYC Link event: Link {$eventType}, ID: {$objectId}");
+        }
+        $borrower = Borrower::where("email", $event['event_object']['email'])->first();
 
-                if ($borrower) {
-                    $kycStatus = $event['event_object']['kyc_status'];
-                    $tos_status = $event['event_object']['tos_status'];
-                    $borrower->tos_status = $tos_status;
-                    if ($kycStatus == "approved") {
-                        $existingTask = UsdWalletQueue::where('borrower_id', $borrower->id)->first();
+        if ($borrower) {
+            $kycStatus = $event['event_object']['kyc_status'];
+            $tos_status = $event['event_object']['tos_status'];
+            $borrower->tos_status = $tos_status;
+            if ($kycStatus == "approved") {
+                $existingTask = UsdWalletQueue::where('borrower_id', $borrower->id)->first();
 
-                        if (!$existingTask) {
-                            UsdWalletQueue::create([
-                                'borrower_id' => $borrower->id,
-                                'bridge_customer_id' => $borrower->bridge_customer_id,
-                                'status' => 'pending',
-                                'retries' => 0,
-                            ]);
-                        }
-                        $borrower->kyc_status = "active";
-                    } elseif ($kycStatus == "not_started") {
-                    } elseif ($kycStatus == "under_review") {
-                        $borrower->kyc_status = "awaiting_approval";
-                    } else {
-                        $borrower->kyc_status = $kycStatus;
-                    }
-                    $borrower->rejection_reasons = json_encode($event['event_object']['rejection_reasons'], JSON_PRETTY_PRINT);
-                    $borrower->save();
+                if (!$existingTask) {
+                    UsdWalletQueue::create([
+                        'borrower_id' => $borrower->id,
+                        'bridge_customer_id' => $borrower->bridge_customer_id,
+                        'status' => 'pending',
+                        'retries' => 0,
+                    ]);
                 }
-                Log::info($event['event_object']);
+                $borrower->kyc_status = "active";
+            } elseif ($kycStatus == "not_started") {
+            } elseif ($kycStatus == "under_review") {
+                $borrower->kyc_status = "awaiting_approval";
+            } else {
+                $borrower->kyc_status = $kycStatus;
+            }
+            $borrower->rejection_reasons = json_encode($event['event_object']['rejection_reasons'], JSON_PRETTY_PRINT);
+            $borrower->save();
+        }
+        Log::info($event['event_object']);
     }
 
     private function handleVirtualAccountActivities(array $event): void
@@ -277,51 +280,49 @@ class BridgeWebhookController extends Controller
         $activityType = $event['event_object']['type'] ?? null;
         $amount = $event['event_object']['amount'] ?? 0;
         $customerId = $event['event_object']['customer_id'] ?? null;
-        
+
         $paymentId = $event['event_object']['deposit_id'] ?? null;
         $createdAt = $event['event_object']['created_at'] ?? null;
         $virtualAccountId = $event['event_object']['virtual_account_id'] ?? null;
-         $wallet = Savings::where('bridge_id', $virtualAccountId)->first();
+        $wallet = Savings::where('bridge_id', $virtualAccountId)->first();
         if (!$wallet) {
             Log::error("Wallet not found for Virtual Account ID: {$virtualAccountId}");
-            return; 
+            return;
         }
 
         $source = $event['event_object']['source'] ?? null;
         $senderName = $source['sender_name'] ?? 'N/A';
         $description = $source['description'] ?? 'N/A';
-        
+
         $borrower = Borrower::where('bridge_customer_id', $customerId)->first();
 
         if (!$borrower) {
             Log::info("💰 {$paymentId} failed, borrower not found for customer ID {$customerId} with amount {$amount} USD");
-            return; 
+            return;
         }
 
         $wallet = Savings::where('bridge_id', $virtualAccountId)->first();
         if (!$wallet) {
             Log::error("Wallet not found for Virtual Account ID: {$virtualAccountId} for Borrower #{$borrower->id}");
-            return; 
+            return;
         }
 
         $transaction = SavingsTransaction::where("external_tx_id", $paymentId)->first();
-        
+
         if (!$transaction && in_array($activityType, ['payment_submitted', 'funds_received', 'payment_processed', 'payment_failed', 'cancelled'])) {
             $carbonDate = \Carbon\Carbon::parse($createdAt);
             $timeOnly = $carbonDate->format('H:i:s');
             $dateOnly = $carbonDate->format('Y-m-d');
-            $reference = "REX-USD-".date("Ymdhsi").'-'.uniqid();
-            
-            $initialStatus = ($activityType === 'funds_received' || $activityType === 'payment_processed') ? 'completed' : 
-                             (($activityType === 'payment_failed' || $activityType === 'cancelled') ? 'failed' : 'pending');
-            
+            $reference = "REX-USD-" . date("Ymdhsi") . '-' . uniqid();
+
+            $initialStatus = ($activityType === 'funds_received' || $activityType === 'payment_processed') ? 'completed' : (($activityType === 'payment_failed' || $activityType === 'cancelled') ? 'failed' : 'pending');
+
             $finalWalletBalance = $wallet->available_balance;
             if ($initialStatus === 'completed') {
                 $finalWalletBalance += $amount;
-            }else {
-
+            } else {
             }
-            
+
             $transaction = SavingsTransaction::create([
                 "reference" => $reference,
                 "borrower_id" => $borrower->id,
@@ -339,11 +340,11 @@ class BridgeWebhookController extends Controller
                 "external_tx_id" => $paymentId,
                 "provider" => "bridge",
             ]);
-            
-            
+
+
             if ($initialStatus === 'completed') {
                 $wallet->increment('available_balance', $amount);
-                $notificationMessage = 'You just recieved USD '.$amount.' from '.$senderName.'.';
+                $notificationMessage = 'You just recieved USD ' . $amount . ' from ' . $senderName . '.';
                 $notificationController = new NotificationController();
                 $notificationRequest = [
                     'type' => 'transaction',
@@ -364,7 +365,7 @@ class BridgeWebhookController extends Controller
             }
             return;
         }
-        
+
 
         if ($transaction) {
             $currentStatus = $transaction->status_id;
@@ -383,7 +384,7 @@ class BridgeWebhookController extends Controller
                     if ($currentStatus != 'completed') {
                         $newStatus = 'completed';
                         $shouldUpdateWallet = true; // Funds must be moved from pending to available
-                        $notificationMessage = 'You just recieved USD '.$amount.' from '.$senderName.'.';
+                        $notificationMessage = 'You just recieved USD ' . $amount . ' from ' . $senderName . '.';
                         $notificationController = new NotificationController();
                         $notificationRequest = [
                             'type' => 'transaction',
@@ -403,7 +404,7 @@ class BridgeWebhookController extends Controller
                         Log::warning("Payment already {$activityType} received for {$paymentId}. Already completed. Idempotency check passed.");
                     }
                     break;
-                    
+
                 case 'payment_failed':
                 case 'cancelled':
                     if ($currentStatus === 'pending') {
@@ -425,17 +426,121 @@ class BridgeWebhookController extends Controller
                     "external_response" => json_encode($event, JSON_PRETTY_PRINT),
                     "data" => json_encode($event, JSON_PRETTY_PRINT),
                 ];
-                
+
                 if ($shouldUpdateWallet) {
                     $finalWalletBalance = $wallet->available_balance + $amount;
-                    
+
                     $updateData["balance"] = $finalWalletBalance; // <--- UPDATED: Sets the balance after this transaction
-                    
+
                     $wallet->increment('available_balance', $amount);
                 }
-                
+
                 $transaction->update($updateData);
             }
         }
+    }
+
+
+    protected function handleWalletActivities($event)
+    {
+        Log::info("entering hand wallet activities");
+        $object = $event['event_object'] ?? [];
+        $activityType = $event['event_object_status'] ?? null;
+
+        $status = $this->mapEventToStatus($activityType);
+
+        $reference = $object['id'] ?? null;
+        $amount = $object['receipt']['final_amount'] ?? 0;
+        $currency = strtoupper($object['currency'] ?? 'USD');
+        $fromWallet = $object['source']['bridge_wallet_id'] ?? null;
+        $toAddress = $object['destination']['to_address'] ?? null;
+        $paymentRail = $object['destination']['payment_rail'] ?? null;
+        $txHash = $object['receipt']['destination_tx_hash'] ?? null;
+        $receiptUrl = $object['receipt']['url'] ?? null;
+        $updatedAt = $object['updated_at'] ?? now();
+        $createdAt = $object['created_at'] ?? now();
+        $carbonDate = \Carbon\Carbon::parse($createdAt);
+        $timeOnly = $carbonDate->format('H:i:s');
+        $dateOnly = $carbonDate->format('Y-m-d');
+
+        $wallet = Savings::where('account_number', $toAddress)->first();
+        if (!$wallet) {
+            Log::error("Wallet not found for Virtual Account ID: {$toAddress}");
+            return;
+        }
+        $borrower = Borrower::where('id', $wallet->borrower_id)->first();
+            Log::error("Borrower found for transaction {$reference}");
+        
+        $finalWalletBalance = $wallet->available_balance;
+        
+        $isExist = SavingsTransaction::where("external_tx_id", $reference)->first();
+        if($isExist){
+            if($isExist->status_id == "completed"){
+                Log::info("completed already {$reference}");
+                return;
+            }
+            $finalWalletBalance = $isExist->balance;
+        }
+
+        if ($status === 'completed') {
+            $finalWalletBalance += $amount;
+            $wallet->increment('available_balance', $amount);
+        } 
+        SavingsTransaction::updateOrCreate(
+            ['external_tx_id' => $reference],
+            [
+                "reference" => $reference,
+                "borrower_id" => $borrower->id,
+                "savings_id" => $wallet->id,
+                "transaction_amount" => $amount,
+                "balance" => $finalWalletBalance,
+                "transaction_date" => $dateOnly,
+                "transaction_time" => $timeOnly,
+                "transaction_type" => "credit",
+                "transaction_description" => "",
+                "credit" => $amount,
+                "status_id" => $status,
+                "currency" => "USD",
+                "external_response" => json_encode($event, JSON_PRETTY_PRINT),
+                "external_tx_id" => $reference,
+                "provider" => "bridge",
+            ]
+        );
+
+        Log::info("Bridge wallet transfer handled", [
+            'reference' => $reference,
+            'status' => $status,
+            'amount' => $amount,
+            'currency' => $currency,
+        ]);
+    }
+    private function mapEventToStatus(string $eventType): string
+    {
+        return match ($eventType) {
+            'payment_created',
+            'payment_pending',
+            'wallet.transaction.created',
+            'wallet.transaction.pending'   => 'pending',
+
+            'payment_failed',
+            'payment_canceled',
+            'payment_cancelled',
+            'wallet.transaction.failed',
+            'wallet.transaction.canceled',
+            'refunded',
+            'wallet.transaction.cancelled' => 'failed',
+
+            'wallet.transaction.confirmed',
+            'wallet.transaction.received',
+            'wallet.transaction.completed',
+            'payment_confirmed',
+            'payment_received',
+            'payment_completed',
+            'payment_processed',
+            'funds_received',
+            'wallet.transaction.processed' => 'completed',
+
+            default => 'pending',
+        };
     }
 }

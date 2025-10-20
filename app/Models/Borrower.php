@@ -84,10 +84,10 @@ class Borrower extends Authenticatable implements JWTSubject
         'phone_verified_at' => 'datetime',
     ];
 
-    protected static function booted()
-    {
-        static::addGlobalScope(new CompanyScope);
-    }
+    // protected static function booted()
+    // {
+    //     static::addGlobalScope(new CompanyScope);
+    // }
 
     public function company()
     {

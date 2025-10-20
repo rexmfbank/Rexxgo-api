@@ -730,6 +730,92 @@ class WalletController extends Controller
         }
     }
 
+    /**
+     * @OA\Post(
+     *     path="/api/wallets/transfer",
+     *     tags={"Wallet"},
+     *     summary="Transfer funds between wallets",
+     *     security={{"bearerAuth":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"source_wallet_id", "destination_wallet_id", "amount"},
+     *             @OA\Property(property="source_wallet_id", type="integer", example=1),
+     *             @OA\Property(property="destination_wallet_id", type="integer", example=2),
+     *             @OA\Property(property="amount", type="number", example=50.00)
+     *         )
+     *     ),
+     *     @OA\Response(response=200, description="Transfer initiated successfully"),
+     *     @OA\Response(response=400, description="Bad request"),
+     *     @OA\Response(response=401, description="Unauthorized"),
+     * )
+     */
+    public function transfer(Request $request)
+    {
+        $request->validate([
+            'source_wallet_id' => 'required|integer',
+            'destination_wallet_id' => 'required|integer|different:source_wallet_id',
+            'amount' => 'required|numeric|min:0.01',
+        ]);
+
+        $userId = auth()->guard('borrower')->id();
+        $borrower = Borrower::find(auth()->guard('borrower')->user()->id);
+        if (!$borrower) {
+            return $this->error('Customer not found!', 400);
+        }
+        if($borrower->bridge_customer_id == ""){
+            return $this->error('Kyc not completed!', 400);
+        }
+        $sourceWallet = Savings::where('id', $request->source_wallet_id)
+            ->where('borrower_id', $userId)
+            ->firstOrFail();
+
+        $destinationWallet = Savings::findOrFail($request->destination_wallet_id);
+
+        if($sourceWallet->bridge_id == "" || $destinationWallet->bridge_id == ""){
+            return $this->error('One of the wallets is not linked!', 400);
+        }
+        $amount = (float) $request->amount;
+
+        if ($sourceWallet->balance < $amount) {
+            return $this->error('Insufficient balance.', 400);
+        }
+        $data = null;
+        if($sourceWallet->currency == SavingsProduct::$usdc && $destinationWallet->currency == SavingsProduct::$usd){
+            $data = $this->bridgeService->transferUsdcToUsd($borrower->bridge_customer_id, $sourceWallet->bridge_id, $destinationWallet->bridge_id, $amount);
+        }
+        
+        // $transferId = $data['id'] ?? $reference;
+
+        // $sourceWallet->balance -= $amount;
+        // $sourceWallet->save();
+
+        // SavingsTransaction::create([
+        //     'reference' => $reference,
+        //     'borrower_id' => $userId,
+        //     'savings_id' => $sourceWallet->id,
+        //     'transaction_amount' => $amount,
+        //     'balance' => $sourceWallet->balance,
+        //     'transaction_date' => now()->toDateString(),
+        //     'transaction_time' => now()->toTimeString(),
+        //     'transaction_type' => 'debit',
+        //     'transaction_description' => "Wallet transfer to {$destinationWallet->name}",
+        //     'debit' => $amount,
+        //     'credit' => 0,
+        //     'status_id' => 'pending',
+        //     'currency' => $sourceWallet->currency ?? 'USD',
+        //     'external_response' => json_encode($data, JSON_PRETTY_PRINT),
+        //     'external_tx_id' => $transferId,
+        //     'provider' => 'bridge',
+        // ]);
+
+        return $this->success([
+            'transfer_id' => $data,
+            'status' => 'pending',
+            'message' => 'Transfer initiated successfully.',
+        ], 'Transfer initiated successfully.');
+    }
+
 
     /**
      * Create a savings account for a specific product
@@ -768,4 +854,7 @@ class WalletController extends Controller
 
         return $savings;
     }
+
+
+
 }
