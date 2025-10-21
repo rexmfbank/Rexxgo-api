@@ -292,7 +292,10 @@ class BridgeWebhookController extends Controller
 
         $source = $event['event_object']['source'] ?? null;
         $senderName = $source['sender_name'] ?? 'N/A';
+        $sender_bank_routing_number = $source['sender_bank_routing_number'] ?? 'N/A';
+        $trace_number = $source['trace_number'] ?? 'N/A';
         $description = $source['description'] ?? 'N/A';
+        $payment_rail = $source['payment_rail'] ?? 'N/A';
 
         $borrower = Borrower::where('bridge_customer_id', $customerId)->first();
 
@@ -339,6 +342,15 @@ class BridgeWebhookController extends Controller
                 "external_response" => json_encode($event, JSON_PRETTY_PRINT),
                 "external_tx_id" => $paymentId,
                 "provider" => "bridge",
+                "category" => "fund_received",
+                "details" => [
+                    "currency" =>  "USD",
+                    "amount" => $amount,
+                    "sender_bank_routing_number" => $sender_bank_routing_number,
+                    "trace_number" => $trace_number,
+                    "description" => $description,
+                    "payment_rail" => $payment_rail,
+                ]
             ]);
 
 
@@ -383,7 +395,7 @@ class BridgeWebhookController extends Controller
                 case 'payment_processed':
                     if ($currentStatus != 'completed') {
                         $newStatus = 'completed';
-                        $shouldUpdateWallet = true; // Funds must be moved from pending to available
+                        $shouldUpdateWallet = true;
                         $notificationMessage = 'You just recieved USD ' . $amount . ' from ' . $senderName . '.';
                         $notificationController = new NotificationController();
                         $notificationRequest = [
@@ -463,7 +475,8 @@ class BridgeWebhookController extends Controller
         $timeOnly = $carbonDate->format('H:i:s');
         $dateOnly = $carbonDate->format('Y-m-d');
 
-        $wallet = Savings::where('account_number', $toAddress)->first();
+        $wallet = Savings::where('account_number', $toAddress)->orWhere('destination_address', $toAddress)->first();
+
         if (!$wallet) {
             Log::error("Wallet not found for Virtual Account ID: {$toAddress}");
             return;
@@ -486,8 +499,22 @@ class BridgeWebhookController extends Controller
             $finalWalletBalance += $amount;
             $wallet->increment('available_balance', $amount);
         } 
+        $category = "fund_received";
+        $details = [
+            "currency" =>  "USDC",
+            "amount" => $amount,
+            "transaction_hash" => $txHash
+        ];
+        if($wallet->currency == "USD"){
+            $details = [
+                "currency" =>  "USD",
+                "amount" => $amount,
+                "transaction_hash" => $txHash
+            ];
+            $category = "fund_converted";
+        }
         SavingsTransaction::updateOrCreate(
-            ['external_tx_id' => $reference],
+            ['reference' => $reference],
             [
                 "reference" => $reference,
                 "borrower_id" => $borrower->id,
@@ -500,10 +527,12 @@ class BridgeWebhookController extends Controller
                 "transaction_description" => "",
                 "credit" => $amount,
                 "status_id" => $status,
-                "currency" => "USD",
+                "currency" => $wallet->currency,
                 "external_response" => json_encode($event, JSON_PRETTY_PRINT),
-                "external_tx_id" => $reference,
+                "external_tx_id" => $txHash,
                 "provider" => "bridge",
+                "category" => $category,
+                "details" => $details
             ]
         );
 

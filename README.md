@@ -68,4 +68,5 @@ The Laravel framework is open-sourced software licensed under the [MIT license](
 php artisan l5-swagger:generate --no-interaction --no-ansi
 
 php artisan migrate --path=database/migrations/2025_10_08_021703_add_developer_fee_percent_to_savings_products_table.php
-php artisan migrate --path=database/migrations/2025_10_13_202449_add_is_created_to_borrower.php
+php artisan migrate --path=database/migrations/2025_10_21_010342_add_details_and_category.php
+php artisan migrate --path=database/migrations/2025_10_21_014849_add_other_details_tosavings.php

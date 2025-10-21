@@ -46,6 +46,68 @@ class WalletController extends Controller
         return $this->success($wallets, 'Wallets retrieved successfully', 200);
     }
 
+    public function getallusdwallets()
+    {
+        $wallets = DB::table('savings')->where("currency", "USD")->where("bridge_id", "!=", "")->get();
+        foreach ($wallets as $wallet) {
+            $borrower = Borrower::where("id", $wallet->borrower_id)->first();
+            if($borrower == null) continue;
+
+            $bridgeResponse = $this->bridgeService->getVirtualAccount($borrower->bridge_customer_id, $wallet->bridge_id);
+
+            if (empty($bridgeResponse)) {
+                } else {
+                    $fundDestination= $bridgeResponse['destination'];
+                    $fundDestination['wallet_id'] = null;
+                    DB::table('savings')
+                        ->where('id', $wallet->id)
+                        ->update([
+                            'account_type' => "checking",
+                            'status' => "active",
+                            'account_number' => $bridgeResponse['source_deposit_instructions']['bank_account_number'],
+                            'bank_name' => $bridgeResponse['source_deposit_instructions']['bank_name'],
+                            'routing_number' => $bridgeResponse['source_deposit_instructions']['bank_routing_number'],
+                            'account_name' => $bridgeResponse['source_deposit_instructions']['bank_beneficiary_name'],
+                            'bridge_id' => $bridgeResponse['id'],
+                            "bank_address"=> $bridgeResponse['source_deposit_instructions']['bank_address'],
+                            "bank_routing_number"=> $bridgeResponse['source_deposit_instructions']['bank_routing_number'],
+                            "bank_account_number"=> $bridgeResponse['source_deposit_instructions']['bank_account_number'],
+                            "bank_beneficiary_name"=> $bridgeResponse['source_deposit_instructions']['bank_beneficiary_name'],
+                            "bank_beneficiary_address"=> $bridgeResponse['source_deposit_instructions']['bank_beneficiary_address'],
+                            "payment_rail"=> $bridgeResponse['source_deposit_instructions']['payment_rail'],
+                            "payment_rails"=> json_encode($bridgeResponse['source_deposit_instructions']['payment_rails']),
+                            "destination_address" => $fundDestination['address'],
+                            "destination_currency" => $fundDestination['currency'],
+                            "destination_rail" => $fundDestination['payment_rail'],
+                            "wallet_destination" => json_encode($fundDestination)
+                        ]);
+                }
+        }
+        $wallets = DB::table('savings')->where("currency", "USD")->where("bridge_id", "!=", "")->get();
+        return $this->success($wallets, 'Wallets retrieved successfully', 200);
+    }
+
+
+    public function getAllBridgeWallets()
+    {
+        $wallets = $this->bridgeService->getAllWallets();
+
+        foreach ($wallets['data'] as $wallet) {
+            $walletId = $wallet['id'];
+            $address = $wallet['address'];
+            $savings = Savings::where('destination_address', $address)->first();
+
+            if($savings){
+                 DB::table('savings')
+                        ->where('id', $savings->id)
+                        ->update([
+                            "destination_id" => $walletId,
+                        ]);
+            }
+        }
+        return $this->success($wallets, 'Wallets retrieved successfully', 200);
+    }
+
     /**
      * @OA\Get(
      * path="/api/wallets/transactions",
@@ -254,14 +316,30 @@ class WalletController extends Controller
                     $errorMessage .= "Unable to create USD wallet";
                     $isCreateWallet = false;
                 } else {
+                    $fundDestination= $bridgeResponse['destination'];
+                    $fundDestination['wallet_id'] = $walletId;
                     DB::table('savings')
                         ->where('id', $savingWalletUsd->id)
                         ->update([
+                            'account_type' => "checking",
+                            'status' => "active",
                             'account_number' => $bridgeResponse['source_deposit_instructions']['bank_account_number'],
                             'bank_name' => $bridgeResponse['source_deposit_instructions']['bank_name'],
                             'routing_number' => $bridgeResponse['source_deposit_instructions']['bank_routing_number'],
                             'account_name' => $bridgeResponse['source_deposit_instructions']['bank_beneficiary_name'],
                             'bridge_id' => $bridgeResponse['id'],
+                            "bank_address"=> $bridgeResponse['source_deposit_instructions']['bank_address'],
+                            "bank_routing_number"=> $bridgeResponse['source_deposit_instructions']['bank_routing_number'],
+                            "bank_account_number"=> $bridgeResponse['source_deposit_instructions']['bank_account_number'],
+                            "bank_beneficiary_name"=> $bridgeResponse['source_deposit_instructions']['bank_beneficiary_name'],
+                            "bank_beneficiary_address"=> $bridgeResponse['source_deposit_instructions']['bank_beneficiary_address'],
+                            "payment_rail"=> $bridgeResponse['source_deposit_instructions']['payment_rail'],
+                            "payment_rails"=> json_encode($bridgeResponse['source_deposit_instructions']['payment_rails']),
+                            "destination_id" => $walletId,
+                            "destination_address" => $fundDestination['address'],
+                            "destination_currency" => $fundDestination['currency'],
+                            "destination_rail" => $fundDestination['payment_rail'],
+                            "wallet_destination" => json_encode($fundDestination)
                         ]);
                 }
             }
@@ -282,7 +360,7 @@ class WalletController extends Controller
                         ->where('id', $savingWallet->id)
                         ->update([
                             'account_number' => $bridgeResponse['address'],
-                            'bank_name' => 'ETH',
+                            'bank_name' => $bridgeResponse['chain'] ?? 'ethereum',
                             'routing_number' => $bridgeResponse['id'], //wallet id
                             'bridge_id' => $bridgeResponse['id'], //wallet id
                             'account_name' => $borrower->full_name,
@@ -757,7 +835,9 @@ class WalletController extends Controller
             'destination_wallet_id' => 'required|integer|different:source_wallet_id',
             'amount' => 'required|numeric|min:0.01',
         ]);
+        try{
 
+        
         $userId = auth()->guard('borrower')->id();
         $borrower = Borrower::find(auth()->guard('borrower')->user()->id);
         if (!$borrower) {
@@ -777,17 +857,45 @@ class WalletController extends Controller
         }
         $amount = (float) $request->amount;
 
-        if ($sourceWallet->balance < $amount) {
+        if ($sourceWallet->available_balance < $amount) {
             return $this->error('Insufficient balance.', 400);
         }
         $data = null;
         if($sourceWallet->currency == SavingsProduct::$usdc && $destinationWallet->currency == SavingsProduct::$usd){
-            $data = $this->bridgeService->transferUsdcToUsd($borrower->bridge_customer_id, $sourceWallet->bridge_id, $destinationWallet->bridge_id, $amount);
+            
+            $destination = [
+                'payment_rail' => $destinationWallet['destination_rail'] ?? "ethereum",
+                'bridge_wallet_id' => $destinationWallet['destination_id'],
+                'currency' => $destinationWallet['destination_currency'],
+            ];
+         
+            $source = [
+                'payment_rail' => 'bridge_wallet',
+                'bridge_wallet_id' => $sourceWallet->bridge_id,
+                'currency' => 'usdc',
+            ];
+            $data = $this->bridgeService->Transfer($borrower->bridge_customer_id, $source, $destination, $amount);
+        }elseif($sourceWallet->currency == SavingsProduct::$usd && $destinationWallet->currency == SavingsProduct::$usdc){
+            
+            $destination = [
+                'payment_rail' => $destinationWallet['payment_rail'] != "" ? $destinationWallet['payment_rail']: 'ethereum', //not suppose to be hardcoded
+                'bridge_wallet_id' => $destinationWallet['bridge_id'],
+                'currency' => "usdc",
+            ];
+         
+            $source = [
+                'payment_rail' => 'bridge_wallet',
+                'bridge_wallet_id' => $sourceWallet->destination_id, //bridge aumatically route usd transaction to a crypto wallet called desitination, a Bridge Wallet
+                'currency' => 'usdc',
+            ];
+            $data = $this->bridgeService->Transfer($borrower->bridge_customer_id, $source, $destination, $amount);
+        }else {
+            return $this->error("Unsupported conversion");
         }
         
         // $transferId = $data['id'] ?? $reference;
 
-        // $sourceWallet->balance -= $amount;
+        // $sourceWallet->available_balance -= $amount;
         // $sourceWallet->save();
 
         // SavingsTransaction::create([
@@ -795,7 +903,7 @@ class WalletController extends Controller
         //     'borrower_id' => $userId,
         //     'savings_id' => $sourceWallet->id,
         //     'transaction_amount' => $amount,
-        //     'balance' => $sourceWallet->balance,
+        //     'balance' => $sourceWallet->available_balance,
         //     'transaction_date' => now()->toDateString(),
         //     'transaction_time' => now()->toTimeString(),
         //     'transaction_type' => 'debit',
@@ -814,6 +922,17 @@ class WalletController extends Controller
             'status' => 'pending',
             'message' => 'Transfer initiated successfully.',
         ], 'Transfer initiated successfully.');
+         } catch (\RuntimeException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 400);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Server Error: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
 

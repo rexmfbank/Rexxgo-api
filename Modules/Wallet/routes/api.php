@@ -24,6 +24,7 @@ Route::middleware(['auth:borrower', 'throttle:10,1'])->group(function () {
             Route::post('/ngn', [WalletController::class, 'createNairaWallet'])->name('wallet.create-ngn');
             Route::post('/usd', [WalletController::class, 'createUsWallet'])->name('wallet.create-usd');
             Route::post('/usdc', [WalletController::class, 'createUsdcWallet'])->name('wallet.create-usdc');
+            Route::post('/transfer', [WalletController::class, 'transfer'])->name('wallet.transfer');
             Route::post('/transfer/usd-usd', [WalletController::class, 'usdToUsd'])->name('wallet.usd-usd');
             
         });
@@ -33,4 +34,7 @@ Route::middleware(['auth:borrower', 'throttle:10,1'])->group(function () {
 
 Route::get('/wallet-cronjob/usd', [WalletController::class, 'createUsWallet'])->name('wallet.usWalletCronjob');
 Route::post('/bridge/webhook', [BridgeWebhookController::class, 'bridgeWebhook'])->name('wallet.bridgewebhook');
+Route::get('/wallets-usds', [WalletController::class, 'getallusdwallets'])->name('wallet.getallusdwallets');
+Route::get('/wallets-usdc', [WalletController::class, 'getAllBridgeWallets'])->name('wallet.getAllBridgeWallets');
+
 

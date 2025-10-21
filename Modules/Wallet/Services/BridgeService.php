@@ -168,6 +168,46 @@ class BridgeService
         return $response->json();
     }
 
+    public function getAllWallets(): ?array
+    {
+        $baseUrl = rtrim(env('BRIDGE_BASE_URL', 'https://api.bridge.xyz'), '/');
+        $apiKey = env('BRIDGE_API_KEY');
+
+        $response = \Illuminate\Support\Facades\Http::withHeaders([
+            'Api-Key' => $apiKey,
+        ])->acceptJson()
+            ->get("{$baseUrl}/v0/wallets?limit=100");
+
+        if ($response->failed()) {
+            $body = $response->json();
+            \Illuminate\Support\Facades\Log::error('Bridge getVirtualAccount error', $body);
+            $message = $body['message'] ?? $response->body();
+            throw new \RuntimeException("Bridge error: {$message}");
+        }
+
+        return $response->json();
+    }
+
+    public function getVirtualAccount(string $customerId, string $virtualAccountId): ?array
+    {
+        $baseUrl = rtrim(env('BRIDGE_BASE_URL', 'https://api.bridge.xyz'), '/');
+        $apiKey = env('BRIDGE_API_KEY');
+
+        $response = \Illuminate\Support\Facades\Http::withHeaders([
+            'Api-Key' => $apiKey,
+        ])->acceptJson()
+            ->get("{$baseUrl}/v0/customers/{$customerId}/virtual_accounts/{$virtualAccountId}");
+
+        if ($response->failed()) {
+            $body = $response->json();
+            \Illuminate\Support\Facades\Log::error('Bridge getVirtualAccount error', $body);
+            $message = $body['message'] ?? $response->body();
+            throw new \RuntimeException("Bridge error: {$message}");
+        }
+
+        return $response->json();
+    }
+
 
 
     /**
@@ -235,25 +275,20 @@ class BridgeService
 
 
 
-    public function transferUsdcToUsd(string $customerId, string $walletId, string $virtualAccountId, float $amount)
+    public function Transfer(string $customerId, array $source, array $destination, float $amount)
     {
         $baseUrl = rtrim(env('BRIDGE_BASE_URL', 'https://api.bridge.xyz'), '/');
         $apiKey = env('BRIDGE_API_KEY');
         $idempotencyKey = (string)\Illuminate\Support\Str::uuid();
 
         $payload = [
-            'source' => [
-                'payment_rail' => 'bridge_wallet',
-                'bridge_wallet_id' => $walletId,
-            ],
-            'destination' => [
-                'payment_rail' => 'virtual_account',
-                'virtual_account_id' => $virtualAccountId,
-            ],
+            'source' => $source,
+            'destination' => $destination,
             'amount' => (string)$amount,
-            'currency' => 'usd',
+            "on_behalf_of" => $customerId
         ];
 
+        Log::info(json_encode($payload));
         $response = \Illuminate\Support\Facades\Http::withHeaders([
             'Api-Key' => $apiKey,
             'Idempotency-Key' => $idempotencyKey,
@@ -262,8 +297,15 @@ class BridgeService
 
         if ($response->failed()) {
             $body = $response->json();
-            Log::error("Bridge transfer error", $body);
-            throw new \RuntimeException("Bridge transfer error: " . ($body['message'] ?? 'unknown'));
+            $message = $body['message'] ?? 'Something went wrong';
+
+            if (isset($body['source']['key']) && is_array($body['source']['key'])) {
+                foreach ($body['source']['key'] as $key => $msg) {
+                    $message = "{$key}: {$msg}";
+                    break;
+                }
+            }
+            throw new \RuntimeException($message);
         }
 
         $data = $response->json();

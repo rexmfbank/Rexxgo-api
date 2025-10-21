@@ -15,6 +15,7 @@ class WalletResource extends JsonResource
     public function toArray($request)
     {
         return [
+            'id' => $this->id,
             'borrower_id' => $this->borrower_id,
             'savings_product_id' => $this->savings_product_id,
             'available_balance' => $this->available_balance,
@@ -24,6 +25,8 @@ class WalletResource extends JsonResource
             'account_name' => $this->account_name,
             'account_tier' => $this->account_tier,
             'account_type' => $this->account_type,
+            'payment_rail' => $this->payment_rail,
+            'supported_rails' => json_decode($this->payment_rails),
             'bank_name' => $this->bank_name,
             'currency' => $this->currency,
             'routing_number' => $this->routing_number,
