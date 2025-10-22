@@ -995,11 +995,10 @@ public function Rates(Request $request)
     if ($rates->isEmpty()) {
         return $this->error("No rates for {$base}", 404);
     }
-
-    return response()->json([
+    return $this->success([
         'base' => $base,
         'rates' => $rates->pluck('rate', 'target_currency'),
-    ]);
+    ], "Rates");
 }
 
     /**
