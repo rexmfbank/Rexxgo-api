@@ -27,6 +27,8 @@ class TransactionResource extends JsonResource
             'time' => $this->transaction_time,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
+            'category' => $this->category,
+            'details' => json_decode($this->details),
         ];
     }
 }
