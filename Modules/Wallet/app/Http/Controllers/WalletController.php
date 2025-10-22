@@ -12,6 +12,7 @@ use App\Models\UsdWalletQueue;
 use Illuminate\Http\Request;
 use App\Traits\ApiResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Modules\Wallet\app\Http\Resources\WalletResource;
 use Modules\Wallet\app\Http\Resources\TransactionResource;
@@ -822,6 +823,7 @@ class WalletController extends Controller
      *             @OA\Property(property="source_wallet_id", type="integer", example=1),
      *             @OA\Property(property="destination_wallet_id", type="integer", example=2),
      *             @OA\Property(property="amount", type="number", example=50.00)
+     *             @OA\Property(property="transaction_pin", type="string", example=1234)
      *         )
      *     ),
      *     @OA\Response(response=200, description="Transfer initiated successfully"),
@@ -835,6 +837,7 @@ class WalletController extends Controller
             'source_wallet_id' => 'required|integer',
             'destination_wallet_id' => 'required|integer|different:source_wallet_id',
             'amount' => 'required|numeric|min:0.01',
+            'transaction_pin' => 'required',
         ]);
         try{
 
@@ -844,6 +847,11 @@ class WalletController extends Controller
         if (!$borrower) {
             return $this->error('Customer not found!', 400);
         }
+
+        if(!Hash::check($request->transaction_pin, $borrower->pin)) {
+            return $this->error('Invalid old PIN', 400);
+        }
+
         if($borrower->bridge_customer_id == ""){
             return $this->error('Kyc not completed!', 400);
         }
