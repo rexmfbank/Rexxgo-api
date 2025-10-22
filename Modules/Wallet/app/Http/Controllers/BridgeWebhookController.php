@@ -343,14 +343,14 @@ class BridgeWebhookController extends Controller
                 "external_tx_id" => $paymentId,
                 "provider" => "bridge",
                 "category" => "fund_received",
-                "details" => [
+                "details" => json_encode([
                     "currency" =>  "USD",
                     "amount" => $amount,
                     "sender_bank_routing_number" => $sender_bank_routing_number,
                     "trace_number" => $trace_number,
                     "description" => $description,
                     "payment_rail" => $payment_rail,
-                ]
+                ], JSON_PRETTY_PRINT)
             ]);
 
 
@@ -533,7 +533,7 @@ class BridgeWebhookController extends Controller
                 "external_tx_id" => $txHash,
                 "provider" => "bridge",
                 "category" => $category,
-                "details" => $details
+                "details" => json_encode($details, JSON_PRETTY_PRINT)
             ]
         );
 
