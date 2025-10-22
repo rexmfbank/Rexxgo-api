@@ -1321,6 +1321,70 @@
                     }
                 ]
             }
+        },
+        "/api/wallets/rates": {
+            "get": {
+                "tags": [
+                    "Wallet"
+                ],
+                "summary": "Get currency exchange rates",
+                "description": "Fetch exchange rates for a given base currency from the rates table.",
+                "operationId": "decb1485fb1c0bbca89901710adce1db",
+                "parameters": [
+                    {
+                        "name": "base",
+                        "in": "query",
+                        "description": "Base currency code (e.g., USD, USDC, NGN). Defaults to USD.",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "USD"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful response with rates",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "base": {
+                                            "type": "string",
+                                            "example": "USD"
+                                        },
+                                        "rates": {
+                                            "type": "object",
+                                            "additionalProperties": {
+                                                "type": "number",
+                                                "example": 1.25,
+                                                "property": null
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "No rates found for the given base currency",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "No rates for USD"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     "components": {

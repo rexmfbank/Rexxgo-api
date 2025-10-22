@@ -2,6 +2,7 @@
 
 namespace Modules\Wallet\Database\Seeders;
 
+use App\Models\Rate;
 use Illuminate\Database\Seeder;
 use App\Models\SavingsProduct;
 
@@ -12,6 +13,7 @@ class WalletDatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        $this->seedRates();
         $this->createSavingsProducts();
     }
 
@@ -62,6 +64,32 @@ class WalletDatabaseSeeder extends Seeder
                     'product_name' => $productData['product_name'],
                 ],
                 $productData
+            );
+        }
+    }
+
+    private function seedRates(): void 
+    {
+        $rates = [
+            ['base_currency' => 'USD', 'target_currency' => 'NGN', 'rate' => 1600.50],
+            ['base_currency' => 'USD', 'target_currency' => 'USDC', 'rate' => 1.00],
+            
+            ['base_currency' => 'USDC', 'target_currency' => 'USD', 'rate' => 1.00],
+            ['base_currency' => 'USDC', 'target_currency' => 'NGN', 'rate' => 1600.50],
+
+            ['base_currency' => 'NGN', 'target_currency' => 'USD', 'rate' => 1 / 1600.50],
+            ['base_currency' => 'NGN', 'target_currency' => 'USDC', 'rate' => 1 / 1600.50],
+        ];
+
+        foreach ($rates as $rate) {
+            Rate::updateOrCreate(
+                [
+                    'base_currency' => $rate['base_currency'],
+                    'target_currency' => $rate['target_currency'],
+                ],
+                [
+                    'rate' => $rate['rate'],
+                ]
             );
         }
     }

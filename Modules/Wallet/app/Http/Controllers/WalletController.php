@@ -4,6 +4,7 @@ namespace Modules\Wallet\app\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\Borrower;
+use App\Models\Rate;
 use App\Models\Savings;
 use App\Models\SavingsProduct;
 use App\Models\SavingsTransaction;
@@ -861,6 +862,8 @@ class WalletController extends Controller
             return $this->error('Insufficient balance.', 400);
         }
         $data = null;
+        $reference = "REX-". $sourceWallet->currency ."-" . date("Ymdhsi") . '-' . $borrower->id. uniqid();
+
         if($sourceWallet->currency == SavingsProduct::$usdc && $destinationWallet->currency == SavingsProduct::$usd){
             
             $destination = [
@@ -874,7 +877,8 @@ class WalletController extends Controller
                 'bridge_wallet_id' => $sourceWallet->bridge_id,
                 'currency' => 'usdc',
             ];
-            $data = $this->bridgeService->Transfer($borrower->bridge_customer_id, $source, $destination, $amount);
+
+            $data = $this->bridgeService->Transfer($borrower->bridge_customer_id, $reference, $source, $destination, $amount);
         }elseif($sourceWallet->currency == SavingsProduct::$usd && $destinationWallet->currency == SavingsProduct::$usdc){
             
             $destination = [
@@ -888,34 +892,34 @@ class WalletController extends Controller
                 'bridge_wallet_id' => $sourceWallet->destination_id, //bridge aumatically route usd transaction to a crypto wallet called desitination, a Bridge Wallet
                 'currency' => 'usdc',
             ];
-            $data = $this->bridgeService->Transfer($borrower->bridge_customer_id, $source, $destination, $amount);
+            $data = $this->bridgeService->Transfer($borrower->bridge_customer_id, $reference, $source, $destination, $amount);
         }else {
             return $this->error("Unsupported conversion");
         }
         
-        // $transferId = $data['id'] ?? $reference;
+        $transferId = $data['id'] ?? $reference;
 
-        // $sourceWallet->available_balance -= $amount;
-        // $sourceWallet->save();
+        $sourceWallet->available_balance -= $amount;
+        $sourceWallet->save();
 
-        // SavingsTransaction::create([
-        //     'reference' => $reference,
-        //     'borrower_id' => $userId,
-        //     'savings_id' => $sourceWallet->id,
-        //     'transaction_amount' => $amount,
-        //     'balance' => $sourceWallet->available_balance,
-        //     'transaction_date' => now()->toDateString(),
-        //     'transaction_time' => now()->toTimeString(),
-        //     'transaction_type' => 'debit',
-        //     'transaction_description' => "Wallet transfer to {$destinationWallet->name}",
-        //     'debit' => $amount,
-        //     'credit' => 0,
-        //     'status_id' => 'pending',
-        //     'currency' => $sourceWallet->currency ?? 'USD',
-        //     'external_response' => json_encode($data, JSON_PRETTY_PRINT),
-        //     'external_tx_id' => $transferId,
-        //     'provider' => 'bridge',
-        // ]);
+        SavingsTransaction::create([
+            'reference' => $reference,
+            'borrower_id' => $userId,
+            'savings_id' => $sourceWallet->id,
+            'transaction_amount' => $amount,
+            'balance' => $sourceWallet->available_balance,
+            'transaction_date' => now()->toDateString(),
+            'transaction_time' => now()->toTimeString(),
+            'transaction_type' => 'debit',
+            'transaction_description' => "Wallet transfer to {$destinationWallet->name}",
+            'debit' => $amount,
+            'credit' => 0,
+            'status_id' => 'pending',
+            'currency' => $sourceWallet->currency ?? 'USD',
+            'external_response' => json_encode($data, JSON_PRETTY_PRINT),
+            'external_tx_id' => $transferId.'_init',
+            'provider' => 'bridge',
+        ]);
 
         return $this->success([
             'transfer_id' => $data,
@@ -935,6 +939,60 @@ class WalletController extends Controller
         }
     }
 
+
+    /**
+ * @OA\Get(
+ *     path="/api/wallets/rates",
+ *     summary="Get currency exchange rates",
+ *     description="Fetch exchange rates for a given base currency from the rates table.",
+ *     tags={"Wallet"},
+ *
+ *     @OA\Parameter(
+ *         name="base",
+ *         in="query",
+ *         description="Base currency code (e.g., USD, USDC, NGN). Defaults to USD.",
+ *         required=false,
+ *         @OA\Schema(type="string", example="USD")
+ *     ),
+ *
+ *     @OA\Response(
+ *         response=200,
+ *         description="Successful response with rates",
+ *         @OA\JsonContent(
+ *             type="object",
+ *             @OA\Property(property="base", type="string", example="USD"),
+ *             @OA\Property(
+ *                 property="rates",
+ *                 type="object",
+ *                 additionalProperties=@OA\Property(type="number", example=1.25)
+ *             )
+ *         )
+ *     ),
+ *
+ *     @OA\Response(
+ *         response=404,
+ *         description="No rates found for the given base currency",
+ *         @OA\JsonContent(
+ *             type="object",
+ *             @OA\Property(property="message", type="string", example="No rates for USD")
+ *         )
+ *     )
+ * )
+ */
+public function Rates(Request $request)
+{
+    $base = strtoupper($request->query('base', 'USD'));
+    $rates = Rate::where('base_currency', $base)->get();
+
+    if ($rates->isEmpty()) {
+        return $this->error("No rates for {$base}", 404);
+    }
+
+    return response()->json([
+        'base' => $base,
+        'rates' => $rates->pluck('rate', 'target_currency'),
+    ]);
+}
 
     /**
      * Create a savings account for a specific product

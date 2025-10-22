@@ -32,6 +32,7 @@ Route::middleware(['auth:borrower', 'throttle:10,1'])->group(function () {
 });
 
 
+Route::get('/wallets/rates', [WalletController::class, 'Rates'])->name('wallet.Rates');
 Route::get('/wallet-cronjob/usd', [WalletController::class, 'createUsWallet'])->name('wallet.usWalletCronjob');
 Route::post('/bridge/webhook', [BridgeWebhookController::class, 'bridgeWebhook'])->name('wallet.bridgewebhook');
 Route::get('/wallets-usds', [WalletController::class, 'getallusdwallets'])->name('wallet.getallusdwallets');

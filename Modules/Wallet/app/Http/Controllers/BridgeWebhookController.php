@@ -462,6 +462,7 @@ class BridgeWebhookController extends Controller
         $status = $this->mapEventToStatus($activityType);
 
         $reference = $object['id'] ?? null;
+        $clientReferenceId = $object['client_reference_id'] ?? null;
         $amount = $object['receipt']['final_amount'] ?? 0;
         $currency = strtoupper($object['currency'] ?? 'USD');
         $fromWallet = $object['source']['bridge_wallet_id'] ?? null;

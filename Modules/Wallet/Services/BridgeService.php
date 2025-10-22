@@ -275,7 +275,7 @@ class BridgeService
 
 
 
-    public function Transfer(string $customerId, array $source, array $destination, float $amount)
+    public function Transfer(string $customerId, $reference, array $source, array $destination, float $amount)
     {
         $baseUrl = rtrim(env('BRIDGE_BASE_URL', 'https://api.bridge.xyz'), '/');
         $apiKey = env('BRIDGE_API_KEY');
@@ -285,7 +285,8 @@ class BridgeService
             'source' => $source,
             'destination' => $destination,
             'amount' => (string)$amount,
-            "on_behalf_of" => $customerId
+            "on_behalf_of" => $customerId,
+            "client_reference_id" => $reference
         ];
 
         Log::info(json_encode($payload));

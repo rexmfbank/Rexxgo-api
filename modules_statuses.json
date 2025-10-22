@@ -4,5 +4,6 @@
     "Wallet": true,
     "Notification": true,
     "Profile": true,
-    "Treasury": true
+    "Treasury": true,
+    "Rates": true
 }
