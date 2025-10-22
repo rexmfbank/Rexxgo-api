@@ -822,7 +822,7 @@ class WalletController extends Controller
      *             required={"source_wallet_id", "destination_wallet_id", "amount"},
      *             @OA\Property(property="source_wallet_id", type="integer", example=1),
      *             @OA\Property(property="destination_wallet_id", type="integer", example=2),
-     *             @OA\Property(property="amount", type="number", example=50.00)
+     *             @OA\Property(property="amount", type="number", example=50.00),
      *             @OA\Property(property="transaction_pin", type="string", example=1234)
      *         )
      *     ),

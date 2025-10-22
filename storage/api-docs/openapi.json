@@ -1297,6 +1297,10 @@
                                     "amount": {
                                         "type": "number",
                                         "example": 50
+                                    },
+                                    "transaction_pin": {
+                                        "type": "string",
+                                        "example": 1234
                                     }
                                 },
                                 "type": "object"
