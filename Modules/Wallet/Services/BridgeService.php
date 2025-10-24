@@ -330,12 +330,12 @@ public function createExternalAccount($customerId, array $data)
     $apiKey = env('BRIDGE_API_KEY');
     $idempotencyKey = (string)\Illuminate\Support\Str::uuid();
 
-    $url = "{$baseUrl}/customers/{$customerId}/external_accounts";
+    $url = "{$baseUrl}/v0/customers/{$customerId}/external_accounts";
 
     $response = Http::withHeaders([
         'Api-Key' => $apiKey,
         'Content-Type' => 'application/json',
-        'Idempotency-Key' => $idempotencyKey,
+        'Idempotency-Key' => $idempotencyKey
     ])->withBody(
         json_encode($payload),
         'application/json'
@@ -344,7 +344,7 @@ public function createExternalAccount($customerId, array $data)
     $body = $response->json();
 
     if ($response->failed()) {
-        \Log::error('Bridge externalAccount error', $body);
+        Log::error('Bridge externalAccount error', $body);
         return ["error" => $body['message'] ?? 'Unknown error'];
     }
 
