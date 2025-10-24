@@ -1203,46 +1203,88 @@
                 ]
             }
         },
-        "/api/wallets/transfer/usd-usd": {
+        "/api/wallets/transfer/usd": {
             "post": {
                 "tags": [
                     "Wallet"
                 ],
-                "summary": "Transfer from USD to USD",
-                "operationId": "1b7c5da9de90b31e790b52bcd2cb3349",
+                "summary": "Transfer funds to a US external bank account",
+                "operationId": "edd039641e8f1a7b3b1cb254b0fc1340",
                 "requestBody": {
                     "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
-                                "required": [
-                                    "amount",
-                                    "routing_number",
-                                    "account_holder_name",
-                                    "account_number",
-                                    "account_type"
-                                ],
                                 "properties": {
-                                    "amount": {
-                                        "type": "number",
-                                        "format": "float",
-                                        "example": 100.5
-                                    },
-                                    "routing_number": {
+                                    "currency": {
                                         "type": "string",
-                                        "example": "0000000"
+                                        "example": "usd"
                                     },
-                                    "account_holder_name": {
+                                    "bank_name": {
                                         "type": "string",
-                                        "example": "Don Carlo"
+                                        "example": "Wells Fargo"
                                     },
-                                    "account_number": {
+                                    "account_owner_name": {
                                         "type": "string",
-                                        "example": "1234567890"
+                                        "example": "John Doe"
                                     },
                                     "account_type": {
                                         "type": "string",
-                                        "example": "checking"
+                                        "example": "us"
+                                    },
+                                    "account": {
+                                        "properties": {
+                                            "account_number": {
+                                                "type": "string",
+                                                "example": "1210002481111"
+                                            },
+                                            "routing_number": {
+                                                "type": "string",
+                                                "example": "121000248"
+                                            },
+                                            "checking_or_savings": {
+                                                "type": "string",
+                                                "example": "checking"
+                                            }
+                                        },
+                                        "type": "object"
+                                    },
+                                    "address": {
+                                        "properties": {
+                                            "street_line_1": {
+                                                "type": "string",
+                                                "example": "123 Main St"
+                                            },
+                                            "city": {
+                                                "type": "string",
+                                                "example": "San Francisco"
+                                            },
+                                            "state": {
+                                                "type": "string",
+                                                "example": "CA"
+                                            },
+                                            "postal_code": {
+                                                "type": "string",
+                                                "example": "94102"
+                                            },
+                                            "country": {
+                                                "type": "string",
+                                                "example": "USA"
+                                            }
+                                        },
+                                        "type": "object"
+                                    },
+                                    "narration": {
+                                        "type": "string",
+                                        "example": "Withdrawal to US Bank"
+                                    },
+                                    "transaction_pin": {
+                                        "type": "string",
+                                        "example": "1234"
+                                    },
+                                    "amount": {
+                                        "type": "number",
+                                        "example": 100.5
                                     }
                                 },
                                 "type": "object"
@@ -1252,13 +1294,10 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Created"
+                        "description": "Transfer successful"
                     },
                     "400": {
-                        "description": "Bad Request"
-                    },
-                    "401": {
-                        "description": "Unauthorized"
+                        "description": "Validation or transfer error"
                     }
                 },
                 "security": [

@@ -25,7 +25,7 @@ Route::middleware(['auth:borrower', 'throttle:10,1'])->group(function () {
             Route::post('/usd', [WalletController::class, 'createUsWallet'])->name('wallet.create-usd');
             Route::post('/usdc', [WalletController::class, 'createUsdcWallet'])->name('wallet.create-usdc');
             Route::post('/transfer', [WalletController::class, 'transfer'])->name('wallet.transfer');
-            Route::post('/transfer/usd-usd', [WalletController::class, 'usdToUsd'])->name('wallet.usd-usd');
+            Route::post('/transfer/usd', [WalletController::class, 'transfertoUsBank'])->name('wallet.usd-usd');
             
         });
     });

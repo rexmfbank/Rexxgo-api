@@ -3,6 +3,7 @@
 namespace Modules\Wallet\app\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Models\Beneficiary;
 use App\Models\Borrower;
 use App\Models\Rate;
 use App\Models\Savings;
@@ -14,6 +15,7 @@ use App\Traits\ApiResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Modules\Wallet\app\Http\Requests\ExternalAccountRequest;
 use Modules\Wallet\app\Http\Resources\WalletResource;
 use Modules\Wallet\app\Http\Resources\TransactionResource;
 use Modules\Wallet\Services\BridgeService;
@@ -627,79 +629,142 @@ class WalletController extends Controller
         }
     }
 
+/**
+ * @OA\Post(
+ *     path="/api/wallets/transfer/usd",
+ *     summary="Transfer funds to a US external bank account",
+ *     tags={"Wallet"},
+ *    security={{"bearerAuth":{}}},
+ *
+ *     @OA\RequestBody(
+ *         required=true,
+ *         @OA\JsonContent(
+ *             type="object",
+ *
+ *             @OA\Property(property="currency", type="string", example="usd"),
+ *             @OA\Property(property="bank_name", type="string", example="Wells Fargo"),
+ *             @OA\Property(property="account_owner_name", type="string", example="John Doe"),
+ *             @OA\Property(property="account_type", type="string", example="us"),
+ *
+ *             @OA\Property(
+ *                 property="account",
+ *                 type="object",
+ *                 @OA\Property(property="account_number", type="string", example="1210002481111"),
+ *                 @OA\Property(property="routing_number", type="string", example="121000248"),
+ *                 @OA\Property(property="checking_or_savings", type="string", example="checking")
+ *             ),
+ *
+ *             @OA\Property(
+ *                 property="address",
+ *                 type="object",
+ *                 @OA\Property(property="street_line_1", type="string", example="123 Main St"),
+ *                 @OA\Property(property="city", type="string", example="San Francisco"),
+ *                 @OA\Property(property="state", type="string", example="CA"),
+ *                 @OA\Property(property="postal_code", type="string", example="94102"),
+ *                 @OA\Property(property="country", type="string", example="USA")
+ *             ),
+ *
+ *             @OA\Property(property="narration", type="string", example="Withdrawal to US Bank"),
+ *             @OA\Property(property="transaction_pin", type="string", example="1234"),
+ *             @OA\Property(property="amount", type="number", example=100.50)
+ *         )
+ *     ),
+ *
+ *     @OA\Response(
+ *         response=200,
+ *         description="Transfer successful"
+ *     ),
+ *     @OA\Response(
+ *         response=400,
+ *         description="Validation or transfer error"
+ *     )
+ * )
+ */
 
-    /**
-     * @OA\Post(
-     *   path="/api/wallets/transfer/usd-usd",
-     *   tags={"Wallet"},
-     *   summary="Transfer from USD to USD",
-     *   security={{"bearerAuth":{}}},
-     *   @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             required={"amount", "routing_number", "account_holder_name", "account_number", "account_type"},
-     *             @OA\Property(property="amount", type="number", format="float", example=100.50),
-     *             @OA\Property(property="routing_number", type="string", example="0000000"),
-     *             @OA\Property(property="account_holder_name", type="string", example="Don Carlo"),
-     *             @OA\Property(property="account_number", type="string", example="1234567890"),
-     *             @OA\Property(property="account_type", type="string", example="checking")
-     *         )
-     *    ),
-     *   @OA\Response(response=200, description="Created"),
-     *   @OA\Response(response=400, description="Bad Request"),
-     *   @OA\Response(response=401, description="Unauthorized")
-     * )
-     */
-    public function usdToUsd(Request $request)
-    {
-        $data = $request->validate([
-            'amount' => 'required|numeric|min:1',
-            'account_number' => 'required|string',
-            'routing_number' => 'required|string',
-            'account_holder_name' => 'required|string',
-            'account_type' => 'required|string|in:checking,savings',
-        ]);
+public function transfertoUsBank(ExternalAccountRequest $request)
+{
+    $data = $request->validated();
 
-        if (!auth()->guard('borrower')->check()) {
-            return $this->error('Invalid access token, Please Login', 401);
-        }
-        $borrower = Borrower::find(auth()->guard('borrower')->user()->id);
-        if (!$borrower) {
-            return $this->error('Customer not found!', 400);
-        }
-        $usdWallet = DB::table('savings')->where("borrower_id", $borrower->id)->where("currency", SavingsProduct::$usd)->first();
-        if (!$usdWallet) {
-            return $this->error('USD Wallet not found!', 400);
-        }
-        if ($usdWallet->available_balance < $data['amount']) {
-            return $this->error('Insufficient balance!', 400);
-        }
-        if (!$usdWallet->bridge_id) {
-            return $this->error('USD Wallet not linked!', 400);
-        }
-        $walletId = $usdWallet->bridge_id;
+    if (!auth()->guard('borrower')->check()) {
+        return $this->error('Invalid access token, Please Login', 401);
+    }
 
-        $onBehalfOf = $borrower->bridge_customer_id;
+    $borrower = Borrower::find(auth()->guard('borrower')->user()->id);
 
-        $result = $this->bridgeService->transferUsdToBank(
-            $walletId,
-            $data['amount'],
-            $data,
-            $onBehalfOf
-        );
+    if (!$borrower) {
+        return $this->error('Customer not found!', 400);
+    }
 
-        if (!$result['success']) {
-            return response()->json([
-                'status' => 'error',
-                'message' => $result['error']['message' ?? 'Transfer failed'],
-            ], $result['status']);
+    $wallet = DB::table('savings')->where("borrower_id", $borrower->id)->where("currency", SavingsProduct::$usd)->first();
+
+    if (!$wallet || $wallet->bridge_id == "" || $wallet->account_number == "") {
+        return $this->error('Invalid USD wallet', 400);
+    }
+
+    if(!Hash::check($data['transaction_pin'], $borrower->pin)) {
+            return $this->error('Invalid transaction pin', 400);
         }
 
-        return response()->json([
-            'status' => 'success',
-            'data' => $result['data'],
+    if ($wallet->available_balance < $data['amount']) {
+        return $this->error("Insufficient balance", 400);
+    }
+
+    $accountNumber = $data['account']['account_number'];
+    $routingNumber = $data['account']['routing_number'];
+
+    $beneficiary = Beneficiary::where([
+        'borrower_id' => $borrower->id,
+        'account_number_last4' => $accountNumber,
+        'routing_number' => $routingNumber
+    ])->first();
+
+    if (!$beneficiary) {
+        $externalAccountResponse = $this->bridgeService
+            ->createExternalAccount($borrower->bridge_customer_id, $data);
+
+        if (isset($externalAccountResponse['error'])) {
+            return $this->error($externalAccountResponse['error'], 400);
+        }
+
+        $beneficiary = Beneficiary::create([
+            'wallet_id' => $wallet->id,
+            'external_account_id' => $externalAccountResponse['id'],
+            'account_number_last4' => $accountNumber,
+            'routing_number' => $routingNumber,
+            'bank_name' => $data['bank_name'],
+            'account_owner_name' => $data['account_owner_name'],
+            'currency' => $data['currency'],
         ]);
     }
+    $reference = "REX-". $wallet->currency ."-" . date("Ymdhsi") . '-' . $borrower->id. uniqid();
+    
+    // $destination = [
+    //     'payment_rail' => $destinationWallet['payment_rail'] != "" ? $destinationWallet['payment_rail']: 'ethereum', //not suppose to be hardcoded
+    //     'bridge_wallet_id' => $destinationWallet['bridge_id'],
+    //     'currency' => "usdc",
+    // ];
+    
+    // $source = [
+    //     'payment_rail' => 'bridge_wallet',
+    //     'bridge_wallet_id' => $wallet->destination_id,
+    //     'currency' => 'usdc',
+    // ];
+    // $transferResponse = $this->bridgeService->Transfer($borrower->bridge_customer_id, $reference, $source, $destination, $data['amount']);
+
+
+    // if (isset($transferResponse['error'])) {
+    //     return $this->error($transferResponse['error'], 400);
+    // }
+
+    // /** ✅ 3. Deduct wallet */
+    // $wallet->decrementBalance($data['amount']);
+
+    return response()->json([
+        "message" => "Transfer successful",
+        "external_account" => $externalAccountResponse,
+        // "transfer" => $transferResponse
+    ]);
+}
 
     //write a GET curl function to get wallet balance
     public function getCurl($baseUrl)
