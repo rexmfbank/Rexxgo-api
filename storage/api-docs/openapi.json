@@ -1203,6 +1203,147 @@
                 ]
             }
         },
+        "/api/wallets/beneficiaries": {
+            "get": {
+                "tags": [
+                    "Wallet"
+                ],
+                "summary": "Get beneficiaries by currency",
+                "description": "Returns list of saved external beneficiaries for authenticated user filtered by currency.",
+                "operationId": "fdd88d9686b11fd395ef5975b6fd00a1",
+                "parameters": [
+                    {
+                        "name": "currency",
+                        "in": "query",
+                        "description": "Currency code (usd, ngn, etc.)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "usd"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Retrieval",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Beneficiaries retrieved successfully"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "integer",
+                                                        "example": 1
+                                                    },
+                                                    "account_owner_name": {
+                                                        "type": "string",
+                                                        "example": "John Doe"
+                                                    },
+                                                    "bank_name": {
+                                                        "type": "string",
+                                                        "example": "Wells Fargo"
+                                                    },
+                                                    "currency": {
+                                                        "type": "string",
+                                                        "example": "usd"
+                                                    },
+                                                    "external_account_id": {
+                                                        "type": "string",
+                                                        "example": "ext_81hds7821"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Validation Error"
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/wallets/transfer": {
+            "post": {
+                "tags": [
+                    "Wallet"
+                ],
+                "summary": "Transfer funds between wallets",
+                "operationId": "dc40553a6557c991efd105dd149da4fe",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "source_wallet_id",
+                                    "destination_wallet_id",
+                                    "amount"
+                                ],
+                                "properties": {
+                                    "source_wallet_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "destination_wallet_id": {
+                                        "type": "integer",
+                                        "example": 2
+                                    },
+                                    "amount": {
+                                        "type": "number",
+                                        "example": 50
+                                    },
+                                    "transaction_pin": {
+                                        "type": "string",
+                                        "example": 1234
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Transfer initiated successfully"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/wallets/transfer/usd": {
             "post": {
                 "tags": [
@@ -1236,7 +1377,7 @@
                                         "properties": {
                                             "account_number": {
                                                 "type": "string",
-                                                "example": "1210002481111"
+                                                "example": "1210002481115"
                                             },
                                             "routing_number": {
                                                 "type": "string",
@@ -1307,39 +1448,45 @@
                 ]
             }
         },
-        "/api/wallets/transfer": {
+        "/api/wallets/transfer/usdc": {
             "post": {
                 "tags": [
                     "Wallet"
                 ],
-                "summary": "Transfer funds between wallets",
-                "operationId": "dc40553a6557c991efd105dd149da4fe",
+                "summary": "Transfer USDC from Bridge Wallet to external crypto wallet",
+                "operationId": "dc95d787031693405b409cba990ad3af",
                 "requestBody": {
                     "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
                                 "required": [
-                                    "source_wallet_id",
-                                    "destination_wallet_id",
-                                    "amount"
+                                    "amount",
+                                    "destination_address",
+                                    "network",
+                                    "transaction_pin"
                                 ],
                                 "properties": {
-                                    "source_wallet_id": {
-                                        "type": "integer",
-                                        "example": 1
-                                    },
-                                    "destination_wallet_id": {
-                                        "type": "integer",
-                                        "example": 2
-                                    },
                                     "amount": {
-                                        "type": "number",
-                                        "example": 50
+                                        "type": "string",
+                                        "example": "25.00"
                                     },
                                     "transaction_pin": {
                                         "type": "string",
-                                        "example": 1234
+                                        "example": "1234"
+                                    },
+                                    "destination_address": {
+                                        "type": "string",
+                                        "example": "0x1234567890abcdef"
+                                    },
+                                    "network": {
+                                        "type": "string",
+                                        "example": "ethereum"
+                                    },
+                                    "memo": {
+                                        "type": "string",
+                                        "example": "",
+                                        "nullable": true
                                     }
                                 },
                                 "type": "object"
@@ -1349,13 +1496,10 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Transfer initiated successfully"
+                        "description": "Transfer successful"
                     },
                     "400": {
-                        "description": "Bad request"
-                    },
-                    "401": {
-                        "description": "Unauthorized"
+                        "description": "Error processing request"
                     }
                 },
                 "security": [
