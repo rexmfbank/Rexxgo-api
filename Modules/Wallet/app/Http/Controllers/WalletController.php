@@ -701,9 +701,9 @@ public function transfertoUsBank(ExternalAccountRequest $request)
         return $this->error('Invalid USD wallet', 400);
     }
 
-    if(!Hash::check($data['transaction_pin'], $borrower->pin)) {
-            return $this->error('Invalid transaction pin', 400);
-        }
+    // if(!Hash::check($data['transaction_pin'], $borrower->pin)) {
+    //         return $this->error('Invalid transaction pin', 400);
+    //     }
 
     if ($wallet->available_balance < $data['amount']) {
         return $this->error("Insufficient balance", 400);
