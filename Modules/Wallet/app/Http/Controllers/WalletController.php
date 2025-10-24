@@ -849,7 +849,7 @@ class WalletController extends Controller
         }
 
         if(!Hash::check($request->transaction_pin, $borrower->pin)) {
-            return $this->error('Invalid old PIN', 400);
+            return $this->error('Invalid Pin', 400);
         }
 
         if($borrower->bridge_customer_id == ""){
@@ -857,9 +857,11 @@ class WalletController extends Controller
         }
         $sourceWallet = Savings::where('id', $request->source_wallet_id)
             ->where('borrower_id', $userId)
-            ->firstOrFail();
+            ->first();
 
-        $destinationWallet = Savings::findOrFail($request->destination_wallet_id);
+         $destinationWallet = Savings::where('id', $request->destination_wallet_id)
+            ->where('borrower_id', $userId)
+            ->first();
 
         if($sourceWallet->bridge_id == "" || $destinationWallet->bridge_id == ""){
             return $this->error('One of the wallets is not linked!', 400);
