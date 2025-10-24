@@ -858,10 +858,16 @@ class WalletController extends Controller
         $sourceWallet = Savings::where('id', $request->source_wallet_id)
             ->where('borrower_id', $userId)
             ->first();
-
+        if($sourceWallet == null){
+            return $this->error('Source wallet not found!', 400);
+        }
          $destinationWallet = Savings::where('id', $request->destination_wallet_id)
             ->where('borrower_id', $userId)
             ->first();
+        
+        if($destinationWallet == null){
+            return $this->error('Destination wallet not found!', 400);
+        }
 
         if($sourceWallet->bridge_id == "" || $destinationWallet->bridge_id == ""){
             return $this->error('One of the wallets is not linked!', 400);
