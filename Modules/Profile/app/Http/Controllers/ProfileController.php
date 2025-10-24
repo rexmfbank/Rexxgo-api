@@ -421,6 +421,38 @@ class ProfileController extends Controller
         return $this->success('Pin changed successfully');
     }
 
+        /**
+     * @OA\Post(
+     *   path="/api/profile/pin/verify",
+     *   tags={"Profile"},
+     *   summary="PIN Verify ",
+     *   security={{"bearerAuth":{}}},
+     *   @OA\RequestBody(
+     *     required=true,
+     *     @OA\JsonContent(
+     *       required={"transaction_pin"},
+     *       @OA\Property(property="transaction_pin", type="string", example="1234"),
+     *     )
+     *   ),
+     *   @OA\Response(response=200, description="Valid"),
+     *   @OA\Response(response=400, description="Invalid or expired OTP")
+     * )
+     */
+    public function ValidatePin(Request $request)
+    {
+        $request->validate([
+            'transaction_pin'      => 'required|digits:4',
+        ]);
+
+        $record = Borrower::find(auth()->guard('borrower')->user()->id);
+
+        if (!$record || !Hash::check($request->transaction_pin, $record->pin)) {
+            return $this->error('Invalid Pin', 400);
+        }
+
+        return $this->success('Pin verified successfully');
+    }
+
 
     /**
      * Calculate profile completion percentage

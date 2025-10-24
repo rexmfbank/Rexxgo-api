@@ -20,5 +20,6 @@ Route::middleware(['auth:borrower', 'throttle:10,1'])->group(function () {
         Route::get('/kyc-status', [ProfileController::class, 'getKycStatus'])->name('profile.kyc-status');
         Route::post('/passcode/reset', [ProfileController::class, 'resetPasscode'])->name('profile.resetPasscode');
         Route::post('/pin/reset', [ProfileController::class, 'resetPin'])->name('profile.resetPin');
+        Route::post('/pin/verify', [ProfileController::class, 'ValidatePin'])->name('profile.ValidatePin');
     });
 });

@@ -998,6 +998,47 @@
                 ]
             }
         },
+        "/api/profile/pin/verify": {
+            "post": {
+                "tags": [
+                    "Profile"
+                ],
+                "summary": "PIN Verify ",
+                "operationId": "f61cf2168ce2a55360c9274f36679368",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "transaction_pin"
+                                ],
+                                "properties": {
+                                    "transaction_pin": {
+                                        "type": "string",
+                                        "example": "1234"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Valid"
+                    },
+                    "400": {
+                        "description": "Invalid or expired OTP"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/wallets": {
             "get": {
                 "tags": [
