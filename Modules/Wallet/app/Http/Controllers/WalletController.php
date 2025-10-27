@@ -5,6 +5,7 @@ namespace Modules\Wallet\app\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\Beneficiary;
 use App\Models\Borrower;
+use App\Models\LiquidationAddress;
 use App\Models\Rate;
 use App\Models\Savings;
 use App\Models\SavingsProduct;
@@ -616,6 +617,82 @@ class WalletController extends Controller
             return response()->json([
                 'message' => 'USD wallet Created.',
             ]);
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 400);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Server Error: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+
+    /**
+     * @OA\Post(
+     *   path="/api/wallets/usdc/address",
+     *   tags={"Wallet"},
+     *   summary="Get USDC Liquidation Address",
+     *   security={{"bearerAuth":{}}},
+     *   @OA\Response(response=200, description="Created"),
+     *   @OA\Response(response=400, description="Bad Request"),
+     *   @OA\Response(response=401, description="Unauthorized")
+     * )
+     */
+    public function getLiquidationAddress(Request $request)
+    {
+        if (!auth()->guard('borrower')->check()) {
+            return $this->error('Invalid access token, Please Login', 401);
+        }
+
+        $borrower = Borrower::find(auth()->guard('borrower')->user()->id);
+
+        if (!$borrower) {
+            return $this->error('Customer not found!', 400);
+        }
+
+        //check if customer already has a savings account
+        //usdc wallet
+        $savingWallet = DB::table('savings')->where("borrower_id", $borrower->id)->where("currency", SavingsProduct::$usdc)->first();
+
+        if (!$savingWallet || $savingWallet->account_number == "") {
+            return $this->error('Invalid wallet', 400);
+        }
+        $address = LiquidationAddress::where("savings_id", $savingWallet->id)->first();
+        if($address != null){
+            return $this->success($address);
+        }
+
+        try {
+            $bridgeResponse = $this->bridgeService->createLiquidationAddress(
+                $borrower->bridge_customer_id, [
+                    "currency" => "USDC",
+                    "chain" => "ethereum",
+                    "bridge_wallet_id" => $savingWallet->bridge_id,
+                ]);
+            if (empty($bridgeResponse)) {
+                return $this->error("Unable to create Liquidation address", 400);
+            }
+
+            LiquidationAddress::create([
+                "bridge_liquidation_id"      => $bridgeResponse['id'], 
+                "chain"                      => $bridgeResponse['chain'],
+                "savings_id"                 => $savingWallet->id, 
+                "address"                    => $bridgeResponse['address'],
+                "currency"                   => $bridgeResponse['currency'],
+                "customer_id"                => $bridgeResponse['customer_id'],
+                "destination_payment_rail"   => $bridgeResponse['destination_payment_rail'],
+                "destination_currency"       => $bridgeResponse['destination_currency'],
+                "destination_address"        => $bridgeResponse['destination_address'],
+                "state"                      => $bridgeResponse['state'] ?? 'active', 
+            ]);
+
+        $address = LiquidationAddress::where("savings_id", $savingWallet->id)->first();
+            
+            return $this->success($address);
         } catch (\RuntimeException $e) {
             return response()->json([
                 'success' => false,

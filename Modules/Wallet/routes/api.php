@@ -24,6 +24,8 @@ Route::middleware(['auth:borrower', 'throttle:10,1'])->group(function () {
             Route::post('/ngn', [WalletController::class, 'createNairaWallet'])->name('wallet.create-ngn');
             Route::post('/usd', [WalletController::class, 'createUsWallet'])->name('wallet.create-usd');
             Route::post('/usdc', [WalletController::class, 'createUsdcWallet'])->name('wallet.create-usdc');
+            Route::post('/usdc/address', [WalletController::class, 'getLiquidationAddress'])->name('wallet.getLiquidationAddress');
+            
             Route::post('/transfer', [WalletController::class, 'transfer'])->name('wallet.transfer');
             Route::post('/transfer/usd', [WalletController::class, 'transfertoUsBank'])->name('wallet.usd-usd');
             Route::post('/transfer/usdc', [WalletController::class, 'transferCrypto'])->name('wallet.usd-usdc');

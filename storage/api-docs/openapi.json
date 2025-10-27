@@ -1244,6 +1244,31 @@
                 ]
             }
         },
+        "/api/wallets/usdc/address": {
+            "post": {
+                "tags": [
+                    "Wallet"
+                ],
+                "summary": "Get USDC Liquidation Address",
+                "operationId": "57e37ec96c20293ef551c6093eb1795d",
+                "responses": {
+                    "200": {
+                        "description": "Created"
+                    },
+                    "400": {
+                        "description": "Bad Request"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/wallets/beneficiaries": {
             "get": {
                 "tags": [

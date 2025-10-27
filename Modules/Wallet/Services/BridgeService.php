@@ -314,41 +314,78 @@ class BridgeService
         return $data;
     }
 
-public function createExternalAccount($customerId, array $data)
-{
-    $payload = [
-        "id" => $data['id'] ?? (string) \Illuminate\Support\Str::uuid(),
-        "currency" => strtolower($data['currency']),
-        "bank_name" => $data['bank_name'],
-        "account_owner_name" => $data['account_owner_name'],
-        "account_type" => $data['account_type'],
-        "account" => $data['account'],
-        "address" => $data['address'],
-    ];
+    public function createExternalAccount($customerId, array $data)
+    {
+        $payload = [
+            "id" => $data['id'] ?? (string) \Illuminate\Support\Str::uuid(),
+            "currency" => strtolower($data['currency']),
+            "bank_name" => $data['bank_name'],
+            "account_owner_name" => $data['account_owner_name'],
+            "account_type" => $data['account_type'],
+            "account" => $data['account'],
+            "address" => $data['address'],
+        ];
 
-    $baseUrl = rtrim(env('BRIDGE_BASE_URL', 'https://api.bridge.xyz'), '/');
-    $apiKey = env('BRIDGE_API_KEY');
-    $idempotencyKey = (string)\Illuminate\Support\Str::uuid();
+        $baseUrl = rtrim(env('BRIDGE_BASE_URL', 'https://api.bridge.xyz'), '/');
+        $apiKey = env('BRIDGE_API_KEY');
+        $idempotencyKey = (string)\Illuminate\Support\Str::uuid();
 
-    $url = "{$baseUrl}/v0/customers/{$customerId}/external_accounts";
+        $url = "{$baseUrl}/v0/customers/{$customerId}/external_accounts";
 
-    $response = Http::withHeaders([
-        'Api-Key' => $apiKey,
-        'Content-Type' => 'application/json',
-        'Idempotency-Key' => $idempotencyKey
-    ])->withBody(
-        json_encode($payload),
-        'application/json'
-    )->post($url);
+        $response = Http::withHeaders([
+            'Api-Key' => $apiKey,
+            'Content-Type' => 'application/json',
+            'Idempotency-Key' => $idempotencyKey
+        ])->withBody(
+            json_encode($payload),
+            'application/json'
+        )->post($url);
 
-    $body = $response->json();
+        $body = $response->json();
 
-    if ($response->failed()) {
-        Log::error('Bridge externalAccount error', $body);
-        return ["error" => $body['message'] ?? 'Unknown error'];
+        if ($response->failed()) {
+            Log::error('Bridge externalAccount error', $body);
+            return ["error" => $body['message'] ?? 'Unknown error'];
+        }
+
+        return $body;
     }
 
-    return $body;
-}
+    public function createLiquidationAddress(string $customerId, array $data)
+    {
+        $payload = [
+            "currency" => strtolower($data["currency"]),
+            "chain" => strtolower($data["chain"]),
+            "bridge_wallet_id" => $data["bridge_wallet_id"],
+            "destination_payment_rail" => "ethereum",
+            "destination_currency" => "usdc"
+        ];
 
+        if (!empty($data["developer_fee"])) {
+            $payload["custom_developer_fee_percent"] = (string)$data["developer_fee"];
+        }
+
+        $baseUrl = rtrim(env('BRIDGE_BASE_URL', 'https://api.bridge.xyz/v0'), '/');
+        $apiKey = env('BRIDGE_API_KEY');
+        $idempotencyKey = (string)\Illuminate\Support\Str::uuid();
+
+        $url = "{$baseUrl}/v0/customers/{$customerId}/liquidation_addresses";
+
+        \Log::info("Bridge Liquidation Request URL: {$url}");
+        \Log::info("Bridge Liquidation Payload:", $payload);
+
+        $response = Http::withHeaders([
+            'Api-Key' => $apiKey,
+            'Content-Type' => 'application/json',
+            'Idempotency-Key' => $idempotencyKey
+        ])->post($url, $payload);
+
+        $body = $response->json();
+            Log::info($body);
+        if ($response->failed()) {
+            throw new \RuntimeException($body['message'] ?? "Bridge service error");
+        }
+
+        return $body;
+    }
 }
