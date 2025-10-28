@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('bridge_liquidation_id'); 
             $table->string('chain');
-            $table->int('savings_id');
+            $table->unsignedBigInteger('savings_id');
             $table->string('address');
             $table->string('currency');
             $table->string('customer_id');
