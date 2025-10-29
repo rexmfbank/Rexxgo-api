@@ -978,10 +978,6 @@ public function getBeneficiariesByCurrency(Request $request)
                     'bridge_wallet_id' => $sourceWallet->bridge_id,
                     'currency' => 'usdc',
                 ];
-                return $this->success([
-                    $source,
-                    $destination
-                ]);
 
                 $data = $this->bridgeService->Transfer($borrower->bridge_customer_id, $reference, $source, $destination, $amount);
             } elseif ($sourceWallet->currency == SavingsProduct::$usd && $destinationWallet->currency == SavingsProduct::$usdc) {
@@ -1001,6 +997,9 @@ public function getBeneficiariesByCurrency(Request $request)
             } else {
                 return $this->error("Unsupported conversion");
             }
+
+            return $this->success([
+                'transfer_data' => $data]);
 
             $transferId = $data['id'] ?? $reference;
 
@@ -1027,7 +1026,7 @@ public function getBeneficiariesByCurrency(Request $request)
             ]);
 
             return $this->success([
-                'transfer_id' => $data,
+                'transfer_data' => $data,
                 'status' => 'pending',
                 'message' => 'Transfer initiated successfully.',
             ], 'Transfer initiated successfully.');
