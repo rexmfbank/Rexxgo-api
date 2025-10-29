@@ -1005,6 +1005,8 @@ public function getBeneficiariesByCurrency(Request $request)
             $transferId = $data['id'];
 
             $sourceWallet->available_balance -= $amount;
+            $sourceWallet->ledger_balance -= $amount;
+            
             $sourceWallet->save();
 
             SavingsTransaction::create([

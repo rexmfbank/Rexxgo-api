@@ -507,6 +507,7 @@ class BridgeWebhookController extends Controller
         if ($status === 'completed') {
             $finalWalletBalance += $amount;
             $wallet->increment('available_balance', $amount);
+            $wallet->increment('ledger_balance', $amount);
         } 
         $category = "fund_received";
         $details = [
