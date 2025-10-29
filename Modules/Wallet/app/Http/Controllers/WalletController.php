@@ -1021,6 +1021,7 @@ public function getBeneficiariesByCurrency(Request $request)
                 'transaction_description' => "Wallet transfer to {$destinationWallet->name}",
                 'debit' => $amount,
                 'credit' => 0,
+                'category' => 'fund_converted',
                 'status_id' => 'pending',
                 'currency' => $sourceWallet->currency ?? 'USD',
                 'external_response' => json_encode($data, JSON_PRETTY_PRINT),

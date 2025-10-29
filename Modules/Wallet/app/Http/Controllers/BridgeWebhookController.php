@@ -521,6 +521,8 @@ class BridgeWebhookController extends Controller
                 "amount" => $amount,
                 "transaction_hash" => $txHash
             ];
+        }
+        if($isTransactionInitiatedHere){
             $category = "fund_converted";
         }
         SavingsTransaction::updateOrCreate(
