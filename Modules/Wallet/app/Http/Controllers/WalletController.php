@@ -57,6 +57,7 @@ class WalletController extends Controller
         foreach ($wallets as $wallet) {
             $borrower = Borrower::where("id", $wallet->borrower_id)->first();
             if ($borrower == null) continue;
+            if(empty($wallet->account_number)) continue;
 
             $bridgeResponse = $this->bridgeService->getVirtualAccount($borrower->bridge_customer_id, $wallet->bridge_id);
 
