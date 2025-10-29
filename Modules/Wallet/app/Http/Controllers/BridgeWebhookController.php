@@ -492,6 +492,7 @@ class BridgeWebhookController extends Controller
 
         $finalWalletBalance = $wallet->available_balance;
         
+        
         $isExist = SavingsTransaction::where("external_tx_id", $externalReference)->first();
         if($isExist){
             if($isExist->status_id == "completed"){
