@@ -933,9 +933,9 @@ public function getBeneficiariesByCurrency(Request $request)
                 return $this->error('Customer not found!', 400);
             }
 
-            if (!Hash::check($request->transaction_pin, $borrower->pin)) {
-                return $this->error('Invalid Pin', 400);
-            }
+            // if (!Hash::check($request->transaction_pin, $borrower->pin)) {
+            //     return $this->error('Invalid Pin', 400);
+            // }
 
             if ($borrower->bridge_customer_id == "") {
                 return $this->error('Kyc not completed!', 400);
