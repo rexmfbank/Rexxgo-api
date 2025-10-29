@@ -202,7 +202,7 @@ class BridgeService
             $body = $response->json();
             \Illuminate\Support\Facades\Log::error('Bridge getVirtualAccount error', $body);
             $message = $body['message'] ?? $response->body();
-            throw new \RuntimeException("Bridge error: {$message}");
+            throw new \RuntimeException("Bridge error: {$message} - {$virtualAccountId}");
         }
 
         return $response->json();
