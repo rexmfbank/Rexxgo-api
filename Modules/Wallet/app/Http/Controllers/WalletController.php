@@ -978,6 +978,10 @@ public function getBeneficiariesByCurrency(Request $request)
                     'bridge_wallet_id' => $sourceWallet->bridge_id,
                     'currency' => 'usdc',
                 ];
+                return $this->success([
+                    $source,
+                    $destination
+                ]);
 
                 $data = $this->bridgeService->Transfer($borrower->bridge_customer_id, $reference, $source, $destination, $amount);
             } elseif ($sourceWallet->currency == SavingsProduct::$usd && $destinationWallet->currency == SavingsProduct::$usdc) {
