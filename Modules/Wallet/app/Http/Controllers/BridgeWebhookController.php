@@ -116,6 +116,7 @@ class BridgeWebhookController extends Controller
         $objectId = $event['event_object']['id'] ?? 'N/A';
         $status = $event['event_object']['status'] ?? null;
         Log::info("Webhook received: Category: {$category}, Type: {$eventType}, ID: {$objectId}");
+        Log::info($event);
         switch ($category) {
             case 'customer':
                 switch ($eventType) {
@@ -141,28 +142,23 @@ class BridgeWebhookController extends Controller
                     Log::info("New Card Transaction (Authorization): ID: {$objectId}");
                 }
                 if ($eventType === 'card_transaction.updated.status_transitioned') {
-                    Log::info("Card Transaction status transitioned to: {$status} for ID: {$objectId}");
                 }
                 break;
 
             case 'posted_card_account_transaction':
                 if ($eventType === 'posted_card_account_transaction.created') {
-                    Log::info("Posted Card Transaction created (Final Charge/Credit): ID: {$objectId}");
                 }
                 break;
 
             case 'liquidation_address.drain':
                 // Logic for crypto draining
-                Log::info("Liquidation Address Drain event: Type: {$eventType}, ID: {$objectId}");
                 break;
             case 'static_memo.activity':
                 // Logic for static memo deposits
-                Log::info("Static Memo Activity event: Type: {$eventType}, ID: {$objectId}");
                 break;
             case 'virtual_account.activity':
             case 'virtual_account.activity.created':
             case 'virtual_account.activity.updated':
-                Log::info("is it entering here");
                 $this->handleVirtualAccountActivities($event);
                 // Logic for virtual account activity
                 break;
@@ -177,7 +173,7 @@ class BridgeWebhookController extends Controller
                 break;
             case 'card_account':
                 // Logic for card account lifecycle
-                Log::info("Card Account event: Type: {$eventType}, ID: {$objectId}");
+                
                 break;
 
             default:
@@ -187,8 +183,8 @@ class BridgeWebhookController extends Controller
 
     private function handleCustomerEvent(array $event): void
     {
-        Log::info("Customer webhook");
-        Log::info(json_encode($event));
+        
+        
         $eventType = $event['event_type'] ?? 'unknown';
         $objectId = $event['event_object']['id'] ?? 'N/A';
         $status = $event['event_object']['status'] ?? null;
@@ -224,13 +220,13 @@ class BridgeWebhookController extends Controller
                 if ($borrower) {
                     $borrower->kyc_status = "awaiting_approval";
                     $borrower->save();
-                    Log::info("Borrower {$borrower->id} KYC status updated to: awaiting_approval");
+                    
                 } else {
                     Log::warning("Borrower not found for email: {$eventObject['email']}");
                 }
             }
         } catch (\Throwable $th) {
-            Log::info("Failed to update Customer {$eventType}, ID: {$objectId}");
+            
         }
     }
 
@@ -241,9 +237,9 @@ class BridgeWebhookController extends Controller
         $status = $event['event_object']['status'] ?? null;
 
         if ($eventType === 'kyc_link.updated.status_transitioned') {
-            Log::info("KYC Link status changed to: {$status} for ID: {$objectId}");
+            
         } else {
-            Log::info("KYC Link event: Link {$eventType}, ID: {$objectId}");
+            
         }
         $borrower = Borrower::where("email", $event['event_object']['email'])->first();
 
@@ -272,7 +268,7 @@ class BridgeWebhookController extends Controller
             $borrower->rejection_reasons = json_encode($event['event_object']['rejection_reasons'], JSON_PRETTY_PRINT);
             $borrower->save();
         }
-        Log::info($event['event_object']);
+        
     }
 
     private function handleVirtualAccountActivities(array $event): void
@@ -300,7 +296,7 @@ class BridgeWebhookController extends Controller
         $borrower = Borrower::where('bridge_customer_id', $customerId)->first();
 
         if (!$borrower) {
-            Log::info("💰 {$paymentId} failed, borrower not found for customer ID {$customerId} with amount {$amount} USD");
+            
             return;
         }
 
@@ -371,9 +367,9 @@ class BridgeWebhookController extends Controller
                 ];
 
                 $notificationController->createNotification($notificationRequest);
-                Log::info("✅ Wallet funding COMPLETE (MISSING WEBHOOK) for Borrower #{$borrower->id} - amount {$amount} USD. Balance updated to {$finalWalletBalance}.");
+                
             } else {
-                Log::info("💰 Wallet funding: New transaction created as {$initialStatus} for Borrower #{$borrower->id} due to missed previous event.");
+                
             }
             return;
         }
@@ -387,7 +383,7 @@ class BridgeWebhookController extends Controller
             switch ($activityType) {
                 case 'payment_submitted':
                     if ($currentStatus === 'pending') {
-                        Log::info("Payment submitted event received for {$paymentId}. Already pending. No change needed.");
+                        
                     }
                     break;
 
@@ -411,7 +407,7 @@ class BridgeWebhookController extends Controller
                         ];
 
                         $notificationController->createNotification($notificationRequest);
-                        Log::info("✅ Payment {$activityType} received for {$paymentId}. Finalizing from pending to completed.");
+                        
                     } else if ($currentStatus === 'completed') {
                         Log::warning("Payment already {$activityType} received for {$paymentId}. Already completed. Idempotency check passed.");
                     }
@@ -428,7 +424,7 @@ class BridgeWebhookController extends Controller
                     break;
 
                 default:
-                    Log::info("Virtual account activity: Unhandled type {$activityType} for {$amount} USD.");
+                    
                     break;
             }
 
@@ -455,7 +451,7 @@ class BridgeWebhookController extends Controller
 
     protected function handleWalletActivities($event)
     {
-        Log::info("entering hand wallet activities");
+        
         $object = $event['event_object'] ?? [];
         $activityType = $event['event_object_status'] ?? null;
 
@@ -490,7 +486,7 @@ class BridgeWebhookController extends Controller
         $isExist = SavingsTransaction::where("external_tx_id", $reference)->first();
         if($isExist){
             if($isExist->status_id == "completed"){
-                Log::info("completed already {$reference}");
+                
                 return;
             }
             $finalWalletBalance = $isExist->balance;
@@ -536,13 +532,6 @@ class BridgeWebhookController extends Controller
                 "details" => json_encode($details, JSON_PRETTY_PRINT)
             ]
         );
-
-        Log::info("Bridge wallet transfer handled", [
-            'reference' => $reference,
-            'status' => $status,
-            'amount' => $amount,
-            'currency' => $currency,
-        ]);
     }
     private function mapEventToStatus(string $eventType): string
     {
