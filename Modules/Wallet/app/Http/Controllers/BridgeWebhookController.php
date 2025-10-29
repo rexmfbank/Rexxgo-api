@@ -497,7 +497,6 @@ class BridgeWebhookController extends Controller
         $isExist = SavingsTransaction::where("external_tx_id", $externalReference)->first();
         if($isExist){
             if($isExist->status_id == "completed"){
-                
                 return;
             }
             $reference = $isExist->reference;
