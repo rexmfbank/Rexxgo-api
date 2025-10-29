@@ -458,7 +458,7 @@ class BridgeWebhookController extends Controller
 
         $status = $this->mapEventToStatus($activityType);
 
-        $externalReference = $object['id'] ?? null;
+        $externalReference = $event['event_object_id'] ?? null;
         $clientReferenceId = $object['client_reference_id'] ?? null;
         $amount = $object['receipt']['final_amount'] ?? 0;
         $currency = strtoupper($object['currency'] ?? 'USD');
@@ -538,7 +538,7 @@ class BridgeWebhookController extends Controller
                 "status_id" => $status,
                 "currency" => $wallet->currency,
                 "external_response" => json_encode($event, JSON_PRETTY_PRINT),
-                "external_tx_id" => $txHash,
+                "external_tx_id" => $externalReference,
                 "provider" => "bridge",
                 "category" => $category,
                 "details" => json_encode($details, JSON_PRETTY_PRINT)
