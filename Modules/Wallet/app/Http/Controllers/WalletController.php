@@ -1009,7 +1009,7 @@ public function getBeneficiariesByCurrency(Request $request)
             
             $sourceWallet->save();
 
-            SavingsTransaction::create([
+            $newTransaction = SavingsTransaction::create([
                 'reference' => $reference,
                 'borrower_id' => $userId,
                 'savings_id' => $sourceWallet->id,
@@ -1028,11 +1028,9 @@ public function getBeneficiariesByCurrency(Request $request)
                 'provider' => 'bridge',
             ]);
 
-            return $this->success([
-                'transfer_data' => $data,
-                'status' => 'pending',
-                'message' => 'Transfer initiated successfully.',
-            ], 'Transfer initiated successfully.');
+            $res = new TransactionResource($newTransaction);
+
+            return $this->success($res, 'Transfer initiated successfully.');
         } catch (\RuntimeException $e) {
             return response()->json([
                 'success' => false,
