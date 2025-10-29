@@ -454,6 +454,7 @@ class BridgeWebhookController extends Controller
         
         $object = $event['event_object'] ?? [];
         $activityType = $event['event_object_status'] ?? null;
+        if($activityType == "in_review") return;
 
         $status = $this->mapEventToStatus($activityType);
 
@@ -492,7 +493,7 @@ class BridgeWebhookController extends Controller
 
         $finalWalletBalance = $wallet->available_balance;
         
-        
+
         $isExist = SavingsTransaction::where("external_tx_id", $externalReference)->first();
         if($isExist){
             if($isExist->status_id == "completed"){
