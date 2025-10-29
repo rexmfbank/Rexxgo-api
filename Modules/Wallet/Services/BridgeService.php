@@ -371,8 +371,8 @@ class BridgeService
 
         $url = "{$baseUrl}/v0/customers/{$customerId}/liquidation_addresses";
 
-        \Log::info("Bridge Liquidation Request URL: {$url}");
-        \Log::info("Bridge Liquidation Payload:", $payload);
+        Log::info("Bridge Liquidation Request URL: {$url}");
+        Log::info("Bridge Liquidation Payload:", $payload);
 
         $response = Http::withHeaders([
             'Api-Key' => $apiKey,

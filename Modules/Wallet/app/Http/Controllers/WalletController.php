@@ -997,11 +997,12 @@ public function getBeneficiariesByCurrency(Request $request)
             } else {
                 return $this->error("Unsupported conversion");
             }
+           
+            if(!isset($data['transfer_data'])){
+                return $this->error($data['message'] ?? "Unsupported conversion");
+            }
 
-            return $this->success([
-                'transfer_data' => $data]);
-
-            $transferId = $data['id'] ?? $reference;
+            $transferId = $data['transfer_data']['id'];
 
             $sourceWallet->available_balance -= $amount;
             $sourceWallet->save();

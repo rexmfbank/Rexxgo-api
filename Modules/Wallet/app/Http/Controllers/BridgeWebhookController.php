@@ -457,7 +457,7 @@ class BridgeWebhookController extends Controller
 
         $status = $this->mapEventToStatus($activityType);
 
-        $reference = $object['id'] ?? null;
+        $externalReference = $object['id'] ?? null;
         $clientReferenceId = $object['client_reference_id'] ?? null;
         $amount = $object['receipt']['final_amount'] ?? 0;
         $currency = strtoupper($object['currency'] ?? 'USD');
@@ -472,6 +472,13 @@ class BridgeWebhookController extends Controller
         $timeOnly = $carbonDate->format('H:i:s');
         $dateOnly = $carbonDate->format('Y-m-d');
 
+
+        //check if the transfer was made on this platform 
+        $isTransactionInitiatedHere = SavingsTransaction::where("reference", $clientReferenceId)->first();
+        if($isTransactionInitiatedHere){
+            $isTransactionInitiatedHere->status_id = $status;
+            $isTransactionInitiatedHere->save();
+        }
         $wallet = Savings::where('account_number', $toAddress)->orWhere('destination_address', $toAddress)->first();
 
         if (!$wallet) {
@@ -479,16 +486,19 @@ class BridgeWebhookController extends Controller
             return;
         }
         $borrower = Borrower::where('id', $wallet->borrower_id)->first();
-            Log::error("Borrower found for transaction {$reference}");
+            Log::error("Borrower found for transaction {$externalReference}");
         
+        $reference = "REX-" . $wallet->currency . "-" . date("Ymdhsi") . '-' . $borrower->id . uniqid();
+
         $finalWalletBalance = $wallet->available_balance;
         
-        $isExist = SavingsTransaction::where("external_tx_id", $reference)->first();
+        $isExist = SavingsTransaction::where("external_tx_id", $externalReference)->first();
         if($isExist){
             if($isExist->status_id == "completed"){
                 
                 return;
             }
+            $reference = $isExist->reference;
             $finalWalletBalance = $isExist->balance;
         }
 
@@ -511,7 +521,7 @@ class BridgeWebhookController extends Controller
             $category = "fund_converted";
         }
         SavingsTransaction::updateOrCreate(
-            ['reference' => $reference],
+            ['external_tx_id' => $externalReference],
             [
                 "reference" => $reference,
                 "borrower_id" => $borrower->id,
@@ -538,6 +548,8 @@ class BridgeWebhookController extends Controller
         return match ($eventType) {
             'payment_created',
             'payment_pending',
+            'in_review',
+            'payment_submitted',
             'wallet.transaction.created',
             'wallet.transaction.pending'   => 'pending',
 
