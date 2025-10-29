@@ -555,6 +555,8 @@ class BridgeWebhookController extends Controller
             'payment_pending',
             'in_review',
             'payment_submitted',
+            'funds_received',
+            'payment_received',
             'wallet.transaction.created',
             'wallet.transaction.pending'   => 'pending',
 
@@ -570,10 +572,8 @@ class BridgeWebhookController extends Controller
             'wallet.transaction.received',
             'wallet.transaction.completed',
             'payment_confirmed',
-            'payment_received',
             'payment_completed',
             'payment_processed',
-            'funds_received',
             'wallet.transaction.processed' => 'completed',
 
             default => 'pending',
