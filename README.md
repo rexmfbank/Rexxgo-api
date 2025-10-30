@@ -73,3 +73,6 @@ php artisan migrate --path=database/migrations/2025_10_21_014849_add_other_detai
 php artisan migrate --path=database/migrations/2025_10_22_085549_create_rates_table.php
 php artisan migrate --path=database/migrations/2025_10_24_072232_create_usd_beneficiaries_table.php
 php artisan mgiration --path=database/migrations/2025_10_27_084538_create_liquidation_addresses_table.php
+
+
+RCP_513uain9bva28q6

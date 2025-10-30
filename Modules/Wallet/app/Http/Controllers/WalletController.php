@@ -20,17 +20,20 @@ use Modules\Wallet\app\Http\Requests\ExternalAccountRequest;
 use Modules\Wallet\app\Http\Resources\WalletResource;
 use Modules\Wallet\app\Http\Resources\TransactionResource;
 use Modules\Wallet\Services\BridgeService;
+use Modules\Wallet\Services\RexMfbService;
 
 class WalletController extends Controller
 {
 
     use ApiResponse;
     protected $bridgeService;
+    protected $rexBank;
 
     // 2. Inject the service into the constructor
-    public function __construct(BridgeService $bridgeService)
+    public function __construct(BridgeService $bridgeService, RexMfbService $rexBank)
     {
         $this->bridgeService = $bridgeService;
+        $this->rexBank = $rexBank;
     }
 
     /**
@@ -234,65 +237,22 @@ class WalletController extends Controller
             //check if customer already has a savings account
             $wallet = DB::table('savings')->where("borrower_id", $borrower->id)->where("currency", SavingsProduct::$ngn)->first();
 
-            // if ($wallet && $wallet->account_number != "") {
-            //     $errorMessage .= "NGN Wallet already exists. ";
-            // }else {
-            //      $data = [
-            //         "firstName"   => $borrower->first_name,
-            //         "lastName"    => $borrower->last_name,
-            //         "email"       => $borrower->email, //horphy2@gmail.com
-            //         "phoneNumber" => $borrower->phone,
-            //     ];
-
-            //     // Merge into request
-            //     $request->merge($data);
-
-            //     // Validate request
-            //     $request->validate([
-            //         'firstName'   => 'required|string|max:50',
-            //         'lastName'    => 'required|string|max:50',
-            //         'email'       => 'required|email|max:100',
-            //         'phoneNumber' => 'required|string|min:11|max:15',
-            //     ]);
+            if ($wallet && $wallet->account_number != "") {
+                $errorMessage .= "NGN Wallet already exists. ";
+            }else {
+                 $data = [
+                    "borrower_id"   => 65, //$borrower->id
+                ];
+                
 
 
-            //     $response = $this->curlFunction($headers, $data);
-            //     $response = json_decode($response, true);
-            //     if ($response && isset($response['success']) && $response['success'] == true) {
-            //         $searchKeys = [
-            //             'borrower_id' => $borrower->id,
-            //             'currency' => 'NGN'
-            //         ];
-
-            //         $updateOrCreateData = [
-            //             'company_id' => $borrower->company_id,
-            //             'branch_id' => $borrower->branch_id,
-            //             'borrower_id' => $borrower->id,
-            //             'account_number' => $response['data']['accountNumber'],
-            //             'account_name' => $response['data']['accountName'],
-            //             'bank_name' => $response['data']['bank'],
-            //             'status' => 'active',
-            //             'available_balance' => 0,
-            //             'ledger_balance' => 0,
-            //             'currency' => 'NGN',
-            //             'savings_product_id' => $savingsProduct ? $savingsProduct->id : 1,
-            //         ];
-            //         $table = DB::table('savings');
-            //         $existingRecord = $table->where($searchKeys)->first();
-            //         //if record already exist, update it. else create new record
-            //         if ($existingRecord) {
-            //             $table->where($searchKeys)->update($updateOrCreateData);
-            //         } else {
-            //             $insertData = array_merge($searchKeys, $updateOrCreateData);
-            //             $table->insert($insertData);
-            //         }
-
-            //         // return $this->success($response['data'], 'Wallet created successfully', 200);
-            //     } else {
-            //         $isCreateWallet = false;
-            //         $errorMessage .= $response['responseMessage'] ?? 'NGN Wallet creation failed. ';
-            //     }
-            // }
+                $response = $this->rexBank->CreateWallet($data);
+                if ($response && isset($response['status']) && $response['status'] == 'success') {
+                } else {
+                    $isCreateWallet = false;
+                    $errorMessage .= $response['responseMessage'] ?? 'NGN Wallet creation failed. ';
+                }
+            }
 
             //create usd wallet
             $savingsProduct = DB::table('savings_products')->where("product_name", SavingsProduct::$usd)->first();
@@ -1294,6 +1254,149 @@ public function transferCrypto(Request $request)
             ], 500);
         }
 }
+
+ /**
+     * @OA\Post(
+     *     path="/api/wallets/transfer/ngn",
+     *     tags={"Wallet"},
+     *     summary="Transfer ngn",
+     *     security={{"bearerAuth":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"amount", "recipient_code", "reason", "transaction_pin"},
+     *             @OA\Property(property="amount", type="string", example=100),
+     *             @OA\Property(property="recipient_code", type="string", example=00000),
+     *             @OA\Property(property="reason", type="string"),
+     *             @OA\Property(property="transaction_pin", type="string", example=1234)
+     *         )
+     *     ),
+     *     @OA\Response(response=200, description="success"),
+     *     @OA\Response(response=400, description="Bad request"),
+     *     @OA\Response(response=401, description="Unauthorized"),
+     * )
+     */
+    public function TransferNgn(Request $request)
+    {
+        $request->validate([
+            'amount' => 'required|string',
+            'recipient_code' => 'required',
+            'transaction_pin' => 'required|digits:4',
+            'reason' => '',
+        ]);
+        try {
+            if (!auth()->guard('borrower')->check()) {
+                return $this->error('Invalid access token, Please Login', 401);
+            }
+            $data = $request->all();
+
+            $borrower = Borrower::find(auth()->guard('borrower')->user()->id);
+
+            if (!$borrower) {
+                return $this->error('Customer not found!', 400);
+            }
+
+            $wallet = DB::table('savings')->where("borrower_id", $borrower->id)->where("currency", SavingsProduct::$ngn)->first();
+
+
+            if(!Hash::check($data['transaction_pin'], $borrower->pin)) {
+                    return $this->error('Invalid transaction pin', 400);
+                }
+
+            if ($wallet->available_balance < $data['amount']) {
+                return $this->error("Insufficient balance", 400);
+            }
+            
+            $data['borrower_id'] = 65;
+            // $data['borrower_id'] = $borrower->id;
+            $response = $this->rexBank->SendMoney($data);
+            if ($response && isset($response['status']) && $response['status'] == 'success') {
+                return $this->success($response['data'], 'Transfer successful');
+            }else {
+                Log::info($response);
+                return $this->error($response['message'] ?? "Something went wrong");
+            }
+            
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 400);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Server Error: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+
+    /**
+     * @OA\Post(
+     *     path="/api/wallets/verify-account",
+     *     tags={"Wallet"},
+     *     summary="Verify account number",
+     *     security={{"bearerAuth":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"account_number", "bank_code"},
+     *             @OA\Property(property="account_number", type="string", example=111111111),
+     *             @OA\Property(property="bank_code", type="string", example=1234)
+     *         )
+     *     ),
+     *     @OA\Response(response=200, description="success"),
+     *     @OA\Response(response=400, description="Bad request"),
+     *     @OA\Response(response=401, description="Unauthorized"),
+     * )
+     */
+    public function VerifyAccountNumber(Request $request)
+    {
+        $request->validate([
+            'account_number' => 'required',
+            'bank_code' => 'required',
+        ]);
+        try {
+
+            $data = $request->all();
+            $response = $this->rexBank->VerifyAccountNumber($data);
+            if ($response && isset($response['status']) && $response['status'] == 'success') {
+                return $this->success($response['data'], 'Acount verified.');
+            }else {
+                return $this->error($response['message'] ?? "Unable to verify account");
+            }
+            
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 400);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Server Error: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+
+/**
+     * @OA\Get(
+     * path="/api/wallets/banks",
+     * tags={"Wallet"},
+     * summary="Get all banks",
+     * security={{"bearerAuth":{}}},
+     * @OA\Response(response=200, description="Success"),
+     * @OA\Response(response=400, description="Bad Request"),
+     * @OA\Response(response=401, description="Unauthorized")
+     * )
+     */
+    public function GetBanks(Request $request)
+    {
+        $banks = $this->rexBank->GetBanks();
+        if(!isset($banks['data'])) return $this->error($banks['message'] ?? 'unable to fetch banks');
+        return $this->success($banks['data'], 'Transactions retrieved successfully', 200);
+    }
 
 
     /**

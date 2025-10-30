@@ -1575,6 +1575,138 @@
                 ]
             }
         },
+        "/api/wallets/transfer/ngn": {
+            "post": {
+                "tags": [
+                    "Wallet"
+                ],
+                "summary": "Transfer ngn",
+                "operationId": "2778038223a0eb469f146f9c7005f71a",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "amount",
+                                    "recipient_code",
+                                    "reason",
+                                    "transaction_pin"
+                                ],
+                                "properties": {
+                                    "amount": {
+                                        "type": "string",
+                                        "example": 100
+                                    },
+                                    "recipient_code": {
+                                        "type": "string",
+                                        "example": 0
+                                    },
+                                    "reason": {
+                                        "type": "string"
+                                    },
+                                    "transaction_pin": {
+                                        "type": "string",
+                                        "example": 1234
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "success"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/wallets/verify-account": {
+            "post": {
+                "tags": [
+                    "Wallet"
+                ],
+                "summary": "Verify account number",
+                "operationId": "12de4a8d6e41173346ea60792fdd4dda",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "account_number",
+                                    "bank_code"
+                                ],
+                                "properties": {
+                                    "account_number": {
+                                        "type": "string",
+                                        "example": 111111111
+                                    },
+                                    "bank_code": {
+                                        "type": "string",
+                                        "example": 1234
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "success"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/wallets/banks": {
+            "get": {
+                "tags": [
+                    "Wallet"
+                ],
+                "summary": "Get all banks",
+                "operationId": "00fe3ba45717a93a82781216d053e796",
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    },
+                    "400": {
+                        "description": "Bad Request"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/wallets/rates": {
             "get": {
                 "tags": [
