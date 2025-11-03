@@ -241,10 +241,9 @@ class WalletController extends Controller
                 $errorMessage .= "NGN Wallet already exists. ";
             }else {
                  $data = [
-                    "borrower_id"   => 65, //$borrower->id
+                    "borrower_id"   => $borrower->id
                 ];
                 
-
 
                 $response = $this->rexBank->CreateWallet($data);
                 if ($response && isset($response['status']) && $response['status'] == 'success') {
@@ -895,9 +894,9 @@ public function getBeneficiariesByCurrency(Request $request)
                 return $this->error('Customer not found!', 400);
             }
 
-            // if (!Hash::check($request->transaction_pin, $borrower->pin)) {
-            //     return $this->error('Invalid Pin', 400);
-            // }
+            if (!Hash::check($request->transaction_pin, $borrower->pin)) {
+                return $this->error('Invalid Pin', 400);
+            }
 
             if ($borrower->bridge_customer_id == "") {
                 return $this->error('Kyc not completed!', 400);
@@ -1307,8 +1306,8 @@ public function transferCrypto(Request $request)
                 return $this->error("Insufficient balance", 400);
             }
             
-            $data['borrower_id'] = 65;
-            // $data['borrower_id'] = $borrower->id;
+            // $data['borrower_id'] = 65;
+            $data['borrower_id'] = $borrower->id;
             $response = $this->rexBank->SendMoney($data);
             if ($response && isset($response['status']) && $response['status'] == 'success') {
                 return $this->success($response['data'], 'Transfer successful');
