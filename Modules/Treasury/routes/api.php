@@ -1,8 +1,10 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Modules\Treasury\Http\Controllers\TreasuryController;
+use Modules\Treasury\app\Http\Controllers\TreasuryController;
 
-Route::middleware(['auth:sanctum'])->prefix('v1')->group(function () {
-    Route::apiResource('treasuries', TreasuryController::class)->names('treasury');
+Route::middleware(['auth:borrower', 'throttle:10,1'])->group(function () {
+    Route::prefix('treasury')->group(function () {
+        Route::get('/', [TreasuryController::class, 'Treasury'])->name('Treasury.all');
+    });
 });

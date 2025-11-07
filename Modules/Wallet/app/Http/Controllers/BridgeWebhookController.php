@@ -309,7 +309,7 @@ class BridgeWebhookController extends Controller
         $transaction = SavingsTransaction::where("external_tx_id", $paymentId)->first();
 
         if (!$transaction && in_array($activityType, ['payment_submitted', 'funds_received', 'payment_processed', 'payment_failed', 'cancelled'])) {
-            $carbonDate = \Carbon\Carbon::parse($createdAt);
+            $carbonDate = \Carbon\Carbon::parse($createdAt)->setTimezone('Africa/Lagos');
             $timeOnly = $carbonDate->format('H:i:s');
             $dateOnly = $carbonDate->format('Y-m-d');
             $reference = "REX-USD-" . date("Ymdhsi") . '-' . uniqid();
@@ -469,7 +469,11 @@ class BridgeWebhookController extends Controller
         $receiptUrl = $object['receipt']['url'] ?? null;
         $updatedAt = $object['updated_at'] ?? now();
         $createdAt = $object['created_at'] ?? now();
-        $carbonDate = \Carbon\Carbon::parse($createdAt);
+        $carbonDate = \Carbon\Carbon::parse($createdAt)->setTimezone('Africa/Lagos');
+
+        $dateOnly = $carbonDate->format('Y-m-d');
+        $timeOnly = $carbonDate->format('H:i:s');
+
         $timeOnly = $carbonDate->format('H:i:s');
         $dateOnly = $carbonDate->format('Y-m-d');
 
@@ -507,6 +511,8 @@ class BridgeWebhookController extends Controller
             $finalWalletBalance += $amount;
             $wallet->increment('available_balance', $amount);
             $wallet->increment('ledger_balance', $amount);
+
+           
         } 
         $category = "fund_received";
         $details = [
@@ -524,7 +530,7 @@ class BridgeWebhookController extends Controller
         if($isTransactionInitiatedHere){
             $category = "fund_converted";
         }
-        SavingsTransaction::updateOrCreate(
+        $transaction = SavingsTransaction::updateOrCreate(
             ['external_tx_id' => $externalReference],
             [
                 "reference" => $reference,
@@ -546,6 +552,24 @@ class BridgeWebhookController extends Controller
                 "details" => json_encode($details, JSON_PRETTY_PRINT)
             ]
         );
+
+         if ($status === 'completed') {
+             $notificationMessage = 'Your ' .$wallet->currency. ' wallet just received '. $amount ;
+            $notificationController = new NotificationController();
+            $notificationRequest = [
+                'type' => 'transaction',
+                'notifiable_type' => 'transaction',
+                'borrower_id' => $borrower->id,
+                'data' => [
+                    'message' => $notificationMessage,
+                    'data' => $transaction,
+                ],
+                'company_id' => null,
+                'branch_id' => null,
+            ];
+
+            $notificationController->createNotification($notificationRequest);
+         }
     }
     private function mapEventToStatus(string $eventType): string
     {

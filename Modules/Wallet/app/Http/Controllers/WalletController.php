@@ -17,6 +17,7 @@ use App\Traits\ApiResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Modules\Notification\app\Http\Controllers\NotificationController;
 use Modules\Wallet\app\Http\Requests\ExternalAccountRequest;
 use Modules\Wallet\app\Http\Resources\WalletResource;
 use Modules\Wallet\app\Http\Resources\TransactionResource;
@@ -994,18 +995,21 @@ public function getBeneficiariesByCurrency(Request $request)
                 if($treasuryWalletUSD->available_balance < $convertedAmount){
                     return response()->json(['error' => 'An error occured'], 404);
                 }
+
                 $treasuryData = [
                     "from_account_number" => $sourceWallet->account_number,
                     "to_account_number" => $treasuryWallet->account_number,
                     "amount" => $amount,
-                    "pin" => $request->transaction_pin
+                    "pin" => $request->transaction_pin,
+                    "borrower_id" => base64_encode(65), //base64_encode($borrower->id)
                 ];
 
                 $creditTreasury = $this->rexBank->SendMoneyInternal($treasuryData);
+                Log::info($creditTreasury);
                 if (!$creditTreasury){ 
-                    return $this->error($response['message'] ?? "Something went wrong");
+                    return $this->error($creditTreasury['message'] ?? "Something went wrong");
                 }elseif(!isset($creditTreasury['status']) || $creditTreasury['status'] != 'success') {
-                    return $this->error($response['message'] ?? "Something went wrong");
+                    return $this->error($creditTreasury['message'] ?? "Something went wrong");
                 }
                 
                 //$ngnTreasury->increment('balance', $amount);
@@ -1029,7 +1033,7 @@ public function getBeneficiariesByCurrency(Request $request)
                     'currency' => 'usdc',
                 ];
                 $data = $this->bridgeService->Transfer($borrower->bridge_customer_id, $reference, $source, $destination, $convertedAmount);
-
+                Log::info($data);
             } elseif ($sourceWallet->currency == SavingsProduct::$ngn && $destinationWallet->currency == SavingsProduct::$usdc) {
                 $rate = Rate::where('base_currency', 'NGN')
                     ->where('target_currency', 'USDC')
@@ -1283,6 +1287,23 @@ public function getBeneficiariesByCurrency(Request $request)
 
             // /** ✅ 3. Deduct wallet */
             $wallet->decrementBalance($data['amount']);
+
+
+            $notificationMessage = 'You transfered USD' . $data['amount'] . ' to ' . $beneficiary['account_owner_name'] . '.';
+            $notificationController = new NotificationController();
+            $notificationRequest = [
+                'type' => 'transaction',
+                'notifiable_type' => 'transaction',
+                'borrower_id' => $borrower->id,
+                'data' => [
+                    'message' => $notificationMessage,
+                    'data' => $transferResponse,
+                ],
+                'company_id' => null,
+                'branch_id' => null,
+            ];
+
+            $notificationController->createNotification($notificationRequest);
 
             return response()->json([
                 "message" => "Transfer successful",

@@ -24,6 +24,7 @@ return [
                     base_path('Modules/Wallet/app/Http/Controllers/WalletController.php'),
                     base_path('Modules/Profile/app/Http/Controllers/ProfileController.php'),
                     base_path('Modules/Notification/app/Http/Controllers/NotificationController.php'),
+                    base_path('Modules/Treasury/app/Http/Controllers/TreasuryController.php'),
                 ],
                 'base' => env('L5_SWAGGER_BASE_PATH', null),
                 'excludes' => [],

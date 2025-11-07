@@ -1039,6 +1039,31 @@
                 ]
             }
         },
+        "/api/treasury": {
+            "get": {
+                "tags": [
+                    "Treasury"
+                ],
+                "summary": "Get all treasury",
+                "operationId": "995273ac2c50ff4ea1c6dc5a304b84bb",
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    },
+                    "400": {
+                        "description": "Bad Request"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/wallets": {
             "get": {
                 "tags": [
@@ -1797,6 +1822,10 @@
         {
             "name": "Profile",
             "description": "Profile"
+        },
+        {
+            "name": "Treasury",
+            "description": "Treasury"
         }
     ]
 }

@@ -1,56 +1,32 @@
 <?php
 
-namespace Modules\Treasury\Http\Controllers;
+namespace Modules\Treasury\app\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Models\Treasury;
+use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+
 
 class TreasuryController extends Controller
 {
+    use ApiResponse;
+
     /**
-     * Display a listing of the resource.
+     * @OA\Get(
+     *   path="/api/treasury",
+     *   tags={"Treasury"},
+     *   summary="Get all treasury",
+     *   security={{"bearerAuth":{}}},
+     *   @OA\Response(response=200, description="Success"),
+     *   @OA\Response(response=400, description="Bad Request"),
+     *   @OA\Response(response=401, description="Unauthorized")
+     * )
      */
-    public function index()
+    public function Treasury()
     {
-        return view('treasury::index');
+        $treasury = Treasury::with('wallet')->get();
+        return $this->success($treasury, 'Treasury retrieved successfully', 200);
     }
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        return view('treasury::create');
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request) {}
-
-    /**
-     * Show the specified resource.
-     */
-    public function show($id)
-    {
-        return view('treasury::show');
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit($id)
-    {
-        return view('treasury::edit');
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, $id) {}
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy($id) {}
 }

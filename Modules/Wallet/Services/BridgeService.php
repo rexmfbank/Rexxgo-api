@@ -298,6 +298,7 @@ class BridgeService
 
         if ($response->failed()) {
             $body = $response->json();
+            Log::info($body);
             $message = $body['message'] ?? 'Something went wrong';
 
             if (isset($body['source']['key']) && is_array($body['source']['key'])) {
