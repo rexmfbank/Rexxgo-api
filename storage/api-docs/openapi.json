@@ -1045,7 +1045,7 @@
                     "Treasury"
                 ],
                 "summary": "Get all treasury",
-                "operationId": "995273ac2c50ff4ea1c6dc5a304b84bb",
+                "operationId": "df3a809e6493a8763c3aa8548db8380d",
                 "responses": {
                     "200": {
                         "description": "Success"
@@ -1578,6 +1578,57 @@
                                         "type": "string",
                                         "example": "",
                                         "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Transfer successful"
+                    },
+                    "400": {
+                        "description": "Error processing request"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/wallets/transfer/usdc/internal": {
+            "post": {
+                "tags": [
+                    "Wallet"
+                ],
+                "summary": "Transfer USDC from Between REX-GO users",
+                "operationId": "9f19295b9f537691cb5b346232f6b4dd",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "amount",
+                                    "user_email",
+                                    "transaction_pin"
+                                ],
+                                "properties": {
+                                    "amount": {
+                                        "type": "string",
+                                        "example": "25.00"
+                                    },
+                                    "transaction_pin": {
+                                        "type": "string",
+                                        "example": "1234"
+                                    },
+                                    "user_email": {
+                                        "type": "string",
+                                        "example": ""
                                     }
                                 },
                                 "type": "object"

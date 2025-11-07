@@ -1431,10 +1431,10 @@ class WalletController extends Controller
      *     @OA\RequestBody(
      *         required=true,
      *         @OA\JsonContent(
-     *             required={"amount","user_id", "transaction_pin"},
+     *             required={"amount","user_email", "transaction_pin"},
      *             @OA\Property(property="amount", type="string", example="25.00"),
      *             @OA\Property(property="transaction_pin", type="string", example="1234"),
-     *             @OA\Property(property="user_id", type="string", example="")
+     *             @OA\Property(property="user_email", type="string", example="")
      *         )
      *     ),
      *     @OA\Response(
@@ -1501,7 +1501,9 @@ class WalletController extends Controller
             'bridge_wallet_id' => $wallet->bridge_id,
             'currency' => 'usdc',
         ];
-
+        return $this->success([
+            $destination, $source
+        ]);
         try {
 
             $reference = "REX-" . $wallet->currency . "-" . date("Ymdhsi") . '-' . $borrower->id . uniqid();
