@@ -1492,7 +1492,7 @@ class WalletController extends Controller
 
         $destination = [
             'payment_rail' => "bridge_wallet",
-            'to_address' => $destintionWallet->bridge_id,
+            'bridge_wallet_id' => $destintionWallet->bridge_id,
             'currency' => 'usdc',
         ];
 
