@@ -1543,7 +1543,7 @@ class WalletController extends Controller
 
             $res = new TransactionResource($newTransaction);
 
-            return $this->success($res, 'Transfer initiated successfully.');
+            return $this->success($res, 'Transfer initiated successfully. ' . $destintionWallet->bridge_id);
         } catch (\RuntimeException $e) {
             return response()->json([
                 'success' => false,
