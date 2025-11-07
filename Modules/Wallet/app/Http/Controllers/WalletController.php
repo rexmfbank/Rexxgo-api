@@ -62,7 +62,7 @@ class WalletController extends Controller
         foreach ($wallets as $wallet) {
             $borrower = Borrower::where("id", $wallet->borrower_id)->first();
             if ($borrower == null) continue;
-            if(empty($wallet->account_number)) continue;
+            if (empty($wallet->account_number)) continue;
 
             $bridgeResponse = $this->bridgeService->getVirtualAccount($borrower->bridge_customer_id, $wallet->bridge_id);
 
@@ -149,8 +149,8 @@ class WalletController extends Controller
         $borrowerId = auth()->guard('borrower')->user()->id;
         $perPage = $request->query('pageSize', 15);
         $transactions = SavingsTransaction::with("savings")->where("borrower_id", $borrowerId)
-        ->orderBy('created_at', 'desc')
-        ->paginate($perPage);
+            ->orderBy('created_at', 'desc')
+            ->paginate($perPage);
         $paginatedResource = TransactionResource::collection($transactions);
 
         $meta = [
@@ -241,11 +241,11 @@ class WalletController extends Controller
 
             if ($wallet && $wallet->account_number != "") {
                 $errorMessage .= "NGN Wallet already exists. ";
-            }else {
-                 $data = [
+            } else {
+                $data = [
                     "borrower_id"   => $borrower->id
                 ];
-                
+
 
                 $response = $this->rexBank->CreateWallet($data);
                 if ($response && isset($response['status']) && $response['status'] == 'success') {
@@ -626,36 +626,38 @@ class WalletController extends Controller
             return $this->error('Invalid wallet', 400);
         }
         $address = LiquidationAddress::where("savings_id", $savingWallet->id)->first();
-        if($address != null){
+        if ($address != null) {
             return $this->success($address);
         }
 
         try {
             $bridgeResponse = $this->bridgeService->createLiquidationAddress(
-                $borrower->bridge_customer_id, [
+                $borrower->bridge_customer_id,
+                [
                     "currency" => "USDC",
                     "chain" => "ethereum",
                     "bridge_wallet_id" => $savingWallet->bridge_id,
-                ]);
+                ]
+            );
             if (empty($bridgeResponse)) {
                 return $this->error("Unable to create Liquidation address", 400);
             }
 
             LiquidationAddress::create([
-                "bridge_liquidation_id"      => $bridgeResponse['id'], 
+                "bridge_liquidation_id"      => $bridgeResponse['id'],
                 "chain"                      => $bridgeResponse['chain'],
-                "savings_id"                 => $savingWallet->id, 
+                "savings_id"                 => $savingWallet->id,
                 "address"                    => $bridgeResponse['address'],
                 "currency"                   => $bridgeResponse['currency'],
                 "customer_id"                => $bridgeResponse['customer_id'],
                 "destination_payment_rail"   => $bridgeResponse['destination_payment_rail'],
                 "destination_currency"       => $bridgeResponse['destination_currency'],
                 "destination_address"        => $bridgeResponse['destination_address'],
-                "state"                      => $bridgeResponse['state'] ?? 'active', 
+                "state"                      => $bridgeResponse['state'] ?? 'active',
             ]);
 
-        $address = LiquidationAddress::where("savings_id", $savingWallet->id)->first();
-            
+            $address = LiquidationAddress::where("savings_id", $savingWallet->id)->first();
+
             return $this->success($address);
         } catch (\RuntimeException $e) {
             return response()->json([
@@ -672,80 +674,80 @@ class WalletController extends Controller
 
 
     /**
- * @OA\Get(
- *     path="/api/wallets/beneficiaries",
- *     summary="Get beneficiaries by currency",
- *     description="Returns list of saved external beneficiaries for authenticated user filtered by currency.",
- *     tags={"Wallet"},
-*    security={{"bearerAuth":{}}},
- *
- *     @OA\Parameter(
- *         name="currency",
- *         in="query",
- *         required=true,
- *         description="Currency code (usd, ngn, etc.)",
- *         @OA\Schema(type="string", example="usd")
- *     ),
- *
- *     @OA\Response(
- *         response=200,
- *         description="Successful Retrieval",
- *         @OA\JsonContent(
- *             @OA\Property(property="status", type="boolean", example=true),
- *             @OA\Property(property="message", type="string", example="Beneficiaries retrieved successfully"),
- *             @OA\Property(
- *                 property="data",
- *                 type="array",
- *                 @OA\Items(
- *                     @OA\Property(property="id", type="integer", example=1),
- *                     @OA\Property(property="account_owner_name", type="string", example="John Doe"),
- *                     @OA\Property(property="bank_name", type="string", example="Wells Fargo"),
- *                     @OA\Property(property="currency", type="string", example="usd"),
- *                     @OA\Property(property="external_account_id", type="string", example="ext_81hds7821")
- *                 )
- *             )
- *         )
- *     ),
- *
- *     @OA\Response(
- *         response=400,
- *         description="Validation Error"
- *     ),
- *     @OA\Response(
- *         response=401,
- *         description="Unauthenticated"
- *     )
- * )
- */
-public function getBeneficiariesByCurrency(Request $request)
-{
-    $request->validate([
-        'currency' => 'required|string'
-    ]);
+     * @OA\Get(
+     *     path="/api/wallets/beneficiaries",
+     *     summary="Get beneficiaries by currency",
+     *     description="Returns list of saved external beneficiaries for authenticated user filtered by currency.",
+     *     tags={"Wallet"},
+     *    security={{"bearerAuth":{}}},
+     *
+     *     @OA\Parameter(
+     *         name="currency",
+     *         in="query",
+     *         required=true,
+     *         description="Currency code (usd, ngn, etc.)",
+     *         @OA\Schema(type="string", example="usd")
+     *     ),
+     *
+     *     @OA\Response(
+     *         response=200,
+     *         description="Successful Retrieval",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Beneficiaries retrieved successfully"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="array",
+     *                 @OA\Items(
+     *                     @OA\Property(property="id", type="integer", example=1),
+     *                     @OA\Property(property="account_owner_name", type="string", example="John Doe"),
+     *                     @OA\Property(property="bank_name", type="string", example="Wells Fargo"),
+     *                     @OA\Property(property="currency", type="string", example="usd"),
+     *                     @OA\Property(property="external_account_id", type="string", example="ext_81hds7821")
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *
+     *     @OA\Response(
+     *         response=400,
+     *         description="Validation Error"
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthenticated"
+     *     )
+     * )
+     */
+    public function getBeneficiariesByCurrency(Request $request)
+    {
+        $request->validate([
+            'currency' => 'required|string'
+        ]);
 
-    $currency = strtolower($request->currency);
-    $borrower = Borrower::find(auth()->guard('borrower')->user()->id);
+        $currency = strtolower($request->currency);
+        $borrower = Borrower::find(auth()->guard('borrower')->user()->id);
 
         if (!$borrower) {
             return $this->error('Customer not found!', 400);
         }
 
-    $beneficiaries = Beneficiary::where('borrower_id', $borrower->id)
-        ->where('currency', $currency)
-        ->get([
-            'id',
-            'account_owner_name',
-            'bank_name',
-            'currency',
-            'external_account_id',
-        ]);
+        $beneficiaries = Beneficiary::where('borrower_id', $borrower->id)
+            ->where('currency', $currency)
+            ->get([
+                'id',
+                'account_owner_name',
+                'bank_name',
+                'currency',
+                'external_account_id',
+            ]);
 
-    return response()->json([
-        'status' => true,
-        'message' => 'Beneficiaries retrieved successfully',
-        'data' => $beneficiaries
-    ]);
-}
+        return response()->json([
+            'status' => true,
+            'message' => 'Beneficiaries retrieved successfully',
+            'data' => $beneficiaries
+        ]);
+    }
 
 
 
@@ -916,10 +918,10 @@ public function getBeneficiariesByCurrency(Request $request)
 
             if ($sourceWallet->currency == SavingsProduct::$ngn && $destinationWallet->bridge_id == "") {
                 return $this->error('Destination wallet is not linked!', 400);
-            }elseif ($destinationWallet->currency == SavingsProduct::$ngn && $sourceWallet->bridge_id == "") {
+            } elseif ($destinationWallet->currency == SavingsProduct::$ngn && $sourceWallet->bridge_id == "") {
                 return $this->error('Source wallet is not linked!', 400);
-            }elseif ( $sourceWallet->bridge_id == "" || $destinationWallet->bridge_id == "") {
-                if ( $sourceWallet->currency != SavingsProduct::$ngn && $destinationWallet->currency != SavingsProduct::$ngn){
+            } elseif ($sourceWallet->bridge_id == "" || $destinationWallet->bridge_id == "") {
+                if ($sourceWallet->currency != SavingsProduct::$ngn && $destinationWallet->currency != SavingsProduct::$ngn) {
                     return $this->error('One of the wallets is not linked!', 400);
                 }
             }
@@ -973,26 +975,26 @@ public function getBeneficiariesByCurrency(Request $request)
 
                 $convertedAmount = $amount * $rate->rate;
                 $ngnTreasury = Treasury::where('currency', 'NGN')->first();
-                if(!$ngnTreasury){
+                if (!$ngnTreasury) {
                     return response()->json(['error' => 'An error occured'], 404);
                 }
 
                 $treasuryWallet = Savings::where("id", $ngnTreasury->savings_id)->first();
-                if(!$treasuryWallet){
+                if (!$treasuryWallet) {
                     return response()->json(['error' => 'An error occured'], 404);
                 }
 
                 $usdTreasury = Treasury::where('currency', 'USD')->first();
-                if(!$usdTreasury){
+                if (!$usdTreasury) {
                     return response()->json(['error' => 'An error occured'], 404);
                 }
 
                 $treasuryWalletUSD = Savings::where("id", $usdTreasury->savings_id)->first();
-                if(!$treasuryWalletUSD){
+                if (!$treasuryWalletUSD) {
                     return response()->json(['error' => 'An error occured'], 404);
                 }
 
-                if($treasuryWalletUSD->available_balance < $convertedAmount){
+                if ($treasuryWalletUSD->available_balance < $convertedAmount) {
                     return response()->json(['error' => 'An error occured'], 404);
                 }
 
@@ -1006,12 +1008,12 @@ public function getBeneficiariesByCurrency(Request $request)
 
                 $creditTreasury = $this->rexBank->SendMoneyInternal($treasuryData);
                 Log::info($creditTreasury);
-                if (!$creditTreasury){ 
+                if (!$creditTreasury) {
                     return $this->error($creditTreasury['message'] ?? "Something went wrong");
-                }elseif(!isset($creditTreasury['status']) || $creditTreasury['status'] != 'success') {
+                } elseif (!isset($creditTreasury['status']) || $creditTreasury['status'] != 'success') {
                     return $this->error($creditTreasury['message'] ?? "Something went wrong");
                 }
-                
+
                 //$ngnTreasury->increment('balance', $amount);
                 $sourceWallet->decrement('available_balance', $amount);
                 $sourceWallet->decrement('ledger_balance', $amount);
@@ -1045,26 +1047,26 @@ public function getBeneficiariesByCurrency(Request $request)
 
                 $convertedAmount = $amount * $rate->rate;
                 $ngnTreasury = Treasury::where('currency', 'NGN')->first();
-                if(!$ngnTreasury){
+                if (!$ngnTreasury) {
                     return response()->json(['error' => 'An error occured'], 404);
                 }
 
                 $treasuryWallet = Savings::where("id", $ngnTreasury->savings_id)->first();
-                if(!$treasuryWallet){
+                if (!$treasuryWallet) {
                     return response()->json(['error' => 'An error occured'], 404);
                 }
 
                 $usdcTreasury = Treasury::where('currency', 'USDC')->first();
-                if(!$usdcTreasury){
+                if (!$usdcTreasury) {
                     return response()->json(['error' => 'An error occured'], 404);
                 }
 
                 $treasuryWalletUSDC = Savings::where("id", $usdcTreasury->savings_id)->first();
-                if(!$treasuryWalletUSDC){
+                if (!$treasuryWalletUSDC) {
                     return response()->json(['error' => 'An error occured'], 404);
                 }
 
-                if($treasuryWalletUSDC->available_balance < $convertedAmount){
+                if ($treasuryWalletUSDC->available_balance < $convertedAmount) {
                     return response()->json(['error' => 'An error occured'], 404);
                 }
                 $treasuryData = [
@@ -1075,12 +1077,12 @@ public function getBeneficiariesByCurrency(Request $request)
                 ];
 
                 $creditTreasury = $this->rexBank->SendMoneyInternal($treasuryData);
-                if (!$creditTreasury){ 
+                if (!$creditTreasury) {
                     return $this->error($response['message'] ?? "Something went wrong");
-                }elseif(!isset($creditTreasury['status']) || $creditTreasury['status'] != 'success') {
+                } elseif (!isset($creditTreasury['status']) || $creditTreasury['status'] != 'success') {
                     return $this->error($response['message'] ?? "Something went wrong");
                 }
-                
+
                 //$ngnTreasury->increment('balance', $amount);
                 $sourceWallet->decrement('available_balance', $amount);
                 $sourceWallet->decrement('ledger_balance', $amount);
@@ -1102,12 +1104,11 @@ public function getBeneficiariesByCurrency(Request $request)
                     'currency' => 'usdc',
                 ];
                 $data = $this->bridgeService->Transfer($borrower->bridge_customer_id, $reference, $source, $destination, $convertedAmount);
-
             } else {
                 return $this->error("Unsupported conversion");
             }
-           
-            if(!isset($data['id'])){
+
+            if (!isset($data['id'])) {
                 return $this->error($data['message'] ?? "Unsupported conversion");
             }
 
@@ -1115,7 +1116,7 @@ public function getBeneficiariesByCurrency(Request $request)
 
             $sourceWallet->available_balance -= $amount;
             $sourceWallet->ledger_balance -= $amount;
-            
+
             $sourceWallet->save();
 
             $newTransaction = SavingsTransaction::create([
@@ -1227,9 +1228,9 @@ public function getBeneficiariesByCurrency(Request $request)
             return $this->error('Invalid USD wallet', 400);
         }
 
-        if(!Hash::check($data['transaction_pin'], $borrower->pin)) {
-                return $this->error('Invalid transaction pin', 400);
-            }
+        if (!Hash::check($data['transaction_pin'], $borrower->pin)) {
+            return $this->error('Invalid transaction pin', 400);
+        }
 
         if ($wallet->available_balance < $data['amount']) {
             return $this->error("Insufficient balance", 400);
@@ -1325,85 +1326,85 @@ public function getBeneficiariesByCurrency(Request $request)
 
 
     /**
- * @OA\Post(
- *     path="/api/wallets/transfer/usdc",
- *     summary="Transfer USDC from Bridge Wallet to external crypto wallet",
- *     tags={"Wallet"},
- *    security={{"bearerAuth":{}}},
- * 
- *     @OA\RequestBody(
- *         required=true,
- *         @OA\JsonContent(
- *             required={"amount","destination_address","network","transaction_pin"},
- *             @OA\Property(property="amount", type="string", example="25.00"),
- *             @OA\Property(property="transaction_pin", type="string", example="1234"),
- *             @OA\Property(property="destination_address", type="string", example="0x1234567890abcdef"),
- *             @OA\Property(property="network", type="string", example="ethereum"),
- *             @OA\Property(property="memo", type="string", example="", nullable=true)
- *         )
- *     ),
- *     @OA\Response(
- *         response=200,
- *         description="Transfer successful"
- *     ),
- *     @OA\Response(
- *         response=400,
- *         description="Error processing request"
- *     )
- * )
- */
-public function transferCrypto(Request $request)
-{
-    $data = $request->validate([
-        'amount' => 'required|string',
-        'destination_address' => 'required|string',
-        'transaction_pin' => 'required|string',
-        'network' => 'required|string|in:ethereum,polygon,arbitrum,optimism,avalanche_c_chain,solana',
-        'memo' => 'nullable|string'
-    ]);
+     * @OA\Post(
+     *     path="/api/wallets/transfer/usdc",
+     *     summary="Transfer USDC from Bridge Wallet to external crypto wallet",
+     *     tags={"Wallet"},
+     *    security={{"bearerAuth":{}}},
+     * 
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"amount","destination_address","network","transaction_pin"},
+     *             @OA\Property(property="amount", type="string", example="25.00"),
+     *             @OA\Property(property="transaction_pin", type="string", example="1234"),
+     *             @OA\Property(property="destination_address", type="string", example="0x1234567890abcdef"),
+     *             @OA\Property(property="network", type="string", example="ethereum"),
+     *             @OA\Property(property="memo", type="string", example="", nullable=true)
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Transfer successful"
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="Error processing request"
+     *     )
+     * )
+     */
+    public function transferCrypto(Request $request)
+    {
+        $data = $request->validate([
+            'amount' => 'required|string',
+            'destination_address' => 'required|string',
+            'transaction_pin' => 'required|string',
+            'network' => 'required|string|in:ethereum,polygon,arbitrum,optimism,avalanche_c_chain,solana',
+            'memo' => 'nullable|string'
+        ]);
 
-    if (!auth()->guard('borrower')->check()) {
-        return $this->error('Invalid access token, Please Login', 401);
-    }
+        if (!auth()->guard('borrower')->check()) {
+            return $this->error('Invalid access token, Please Login', 401);
+        }
 
-    $borrower = Borrower::find(auth()->guard('borrower')->user()->id);
+        $borrower = Borrower::find(auth()->guard('borrower')->user()->id);
 
-    if (!$borrower) {
-        return $this->error('Customer not found!', 400);
-    }
+        if (!$borrower) {
+            return $this->error('Customer not found!', 400);
+        }
 
-    $wallet = DB::table('savings')->where("borrower_id", $borrower->id)->where("currency", SavingsProduct::$usdc)->first();
+        $wallet = DB::table('savings')->where("borrower_id", $borrower->id)->where("currency", SavingsProduct::$usdc)->first();
 
-    if (!$wallet || $wallet->bridge_id == "") {
-        return $this->error('Invalid USD wallet', 400);
-    }
+        if (!$wallet || $wallet->bridge_id == "") {
+            return $this->error('Invalid USD wallet', 400);
+        }
 
-    if(!Hash::check($data['transaction_pin'], $borrower->pin)) {
+        if (!Hash::check($data['transaction_pin'], $borrower->pin)) {
             return $this->error('Invalid transaction pin', 400);
         }
 
-    if ($wallet->available_balance < $data['amount']) {
-        return $this->error("Insufficient balance", 400);
-    }
-    
-    $destination = [
-        'payment_rail' => $data['network'],
-        'to_address' => $data['destination_address'],
-        'currency' => 'usdc',
-    ];
+        if ($wallet->available_balance < $data['amount']) {
+            return $this->error("Insufficient balance", 400);
+        }
 
-    $source = [
-        'payment_rail' => 'bridge_wallet',
-        'bridge_wallet_id' => $wallet->bridge_id,
-        'currency' => 'usdc',
-    ];
+        $destination = [
+            'payment_rail' => $data['network'],
+            'to_address' => $data['destination_address'],
+            'currency' => 'usdc',
+        ];
 
-    try {
-        
+        $source = [
+            'payment_rail' => 'bridge_wallet',
+            'bridge_wallet_id' => $wallet->bridge_id,
+            'currency' => 'usdc',
+        ];
+
+        try {
+
             $reference = "REX-" . $wallet->currency . "-" . date("Ymdhsi") . '-' . $borrower->id . uniqid();
-    
-    $data = $this->bridgeService->Transfer($borrower->bridge_customer_id, $reference, $source, $destination, $data['amount']);
-    return response()->json([
+
+            $data = $this->bridgeService->Transfer($borrower->bridge_customer_id, $reference, $source, $destination, $data['amount']);
+            return response()->json([
                 "message" => "Transfer successful",
             ]);
         } catch (\RuntimeException $e) {
@@ -1417,9 +1418,144 @@ public function transferCrypto(Request $request)
                 'message' => 'Server Error: ' . $e->getMessage(),
             ], 500);
         }
-}
+    }
 
- /**
+
+    /**
+     * @OA\Post(
+     *     path="/api/wallets/transfer/usdc/internal",
+     *     summary="Transfer USDC from Between REX-GO users",
+     *     tags={"Wallet"},
+     *    security={{"bearerAuth":{}}},
+     * 
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"amount","user_id", "transaction_pin"},
+     *             @OA\Property(property="amount", type="string", example="25.00"),
+     *             @OA\Property(property="transaction_pin", type="string", example="1234"),
+     *             @OA\Property(property="user_id", type="string", example="")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Transfer successful"
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="Error processing request"
+     *     )
+     * )
+     */
+    public function transferCryptoInternal(Request $request)
+    {
+        $data = $request->validate([
+            'amount' => 'required|string',
+            'user_email' => 'required|string',
+            'transaction_pin' => 'required|string'
+        ]);
+
+        if (!auth()->guard('borrower')->check()) {
+            return $this->error('Invalid access token, Please Login', 401);
+        }
+
+        $borrower = Borrower::where("id", auth()->guard('borrower')->user()->id)->first();
+
+        if (!$borrower) {
+            return $this->error('Customer not found!', 400);
+        }
+
+        $wallet = DB::table('savings')->where("borrower_id", $borrower->id)->where("currency", SavingsProduct::$usdc)->first();
+
+        if (!$wallet || $wallet->bridge_id == "") {
+            return $this->error('Invalid USD wallet', 400);
+        }
+
+        if (!Hash::check($data['transaction_pin'], $borrower->pin)) {
+            return $this->error('Invalid transaction pin', 400);
+        }
+
+        if ($wallet->available_balance < $data['amount']) {
+            return $this->error("Insufficient balance", 400);
+        }
+
+        $destinationUser = Borrower::where("email", $data['user_email'])->first();
+        if (!$destinationUser) {
+            return $this->error("Invalid user selected", 400);
+        }
+
+        $destintionWallet = DB::table('savings')->where("borrower_id", $destinationUser->id)->where("currency", SavingsProduct::$usdc)->first();
+
+        if (!$destintionWallet || $destintionWallet->bridge_id == "") {
+            return $this->error('Invalid destination wallet', 400);
+        }
+
+        $destination = [
+            'payment_rail' => "bridge_wallet",
+            'to_address' => $destintionWallet->bridge_id,
+            'currency' => 'usdc',
+        ];
+
+        $source = [
+            'payment_rail' => 'bridge_wallet',
+            'bridge_wallet_id' => $wallet->bridge_id,
+            'currency' => 'usdc',
+        ];
+
+        try {
+
+            $reference = "REX-" . $wallet->currency . "-" . date("Ymdhsi") . '-' . $borrower->id . uniqid();
+
+            $data = $this->bridgeService->Transfer($borrower->bridge_customer_id, $reference, $source, $destination, $data['amount']);
+
+            if (!isset($data['id'])) {
+                return $this->error($data['message'] ?? "Unsupported conversion");
+            }
+
+            $transferId = $data['id'];
+            $amount = $data['amount'];
+            $wallet->available_balance -= $data['amount'];
+            $wallet->ledger_balance -= $data['amount'];
+
+            $wallet->save();
+
+            $newTransaction = SavingsTransaction::create([
+                'reference' => $reference,
+                'borrower_id' => $borrower->id,
+                'savings_id' => $wallet->id,
+                'transaction_amount' => $amount,
+                'balance' => $wallet->available_balance,
+                'transaction_date' => now()->toDateString(),
+                'transaction_time' => now()->toTimeString(),
+                'transaction_type' => 'debit',
+                'transaction_description' => "Wallet transfer to {$destinationUser->name}",
+                'debit' => $amount,
+                'credit' => 0,
+                'category' => 'fund_converted',
+                'status_id' => 'pending',
+                'currency' => $sourceWallet->currency ?? 'USD',
+                'external_response' => json_encode($data, JSON_PRETTY_PRINT),
+                'external_tx_id' => $transferId . '_init',
+                'provider' => 'bridge',
+            ]);
+
+            $res = new TransactionResource($newTransaction);
+
+            return $this->success($res, 'Transfer initiated successfully.');
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 400);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Server Error: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
      * @OA\Post(
      *     path="/api/wallets/transfer/ngn",
      *     tags={"Wallet"},
@@ -1459,29 +1595,28 @@ public function transferCrypto(Request $request)
             if (!$borrower) {
                 return $this->error('Customer not found!', 400);
             }
-            
+
             $wallet = DB::table('savings')->where("borrower_id", $borrower->id)->where("currency", SavingsProduct::$ngn)->first();
 
 
-            if(!Hash::check($data['transaction_pin'], $borrower->pin)) {
-                    return $this->error('Invalid transaction pin', 400);
-                }
-            if($data['amount'] < 100){
+            if (!Hash::check($data['transaction_pin'], $borrower->pin)) {
+                return $this->error('Invalid transaction pin', 400);
+            }
+            if ($data['amount'] < 100) {
                 return $this->error("Amount should be minimum of NGN100", 400);
             }
             if ($wallet->available_balance < $data['amount']) {
                 return $this->error("Insufficient balance", 400);
             }
-            
+
             // $data['borrower_id'] = 65;
             $data['borrower_id'] = $borrower->id;
             $response = $this->rexBank->SendMoney($data);
             if ($response && isset($response['status']) && $response['status'] == 'success') {
                 return $this->success($response['data'], 'Transfer successful');
-            }else {
+            } else {
                 return $this->error($response['message'] ?? "Something went wrong");
             }
-            
         } catch (\RuntimeException $e) {
             return response()->json([
                 'success' => false,
@@ -1527,10 +1662,9 @@ public function transferCrypto(Request $request)
             $response = $this->rexBank->VerifyAccountNumber($data);
             if ($response && isset($response['status']) && $response['status'] == 'success') {
                 return $this->success($response['data'], 'Acount verified.');
-            }else {
+            } else {
                 return $this->error($response['message'] ?? "Unable to verify account");
             }
-            
         } catch (\RuntimeException $e) {
             return response()->json([
                 'success' => false,
@@ -1545,7 +1679,7 @@ public function transferCrypto(Request $request)
     }
 
 
-/**
+    /**
      * @OA\Get(
      * path="/api/wallets/banks",
      * tags={"Wallet"},
@@ -1559,7 +1693,7 @@ public function transferCrypto(Request $request)
     public function GetBanks(Request $request)
     {
         $banks = $this->rexBank->GetBanks();
-        if(!isset($banks['data'])) return $this->error($banks['message'] ?? 'unable to fetch banks');
+        if (!isset($banks['data'])) return $this->error($banks['message'] ?? 'unable to fetch banks');
         return $this->success($banks['data'], 'Transactions retrieved successfully', 200);
     }
 

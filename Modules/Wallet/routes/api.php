@@ -14,9 +14,9 @@ use Modules\Wallet\app\Http\Controllers\WalletController;
 |
 */
 
-Route::middleware(['auth:borrower', 'throttle:10,1'])->group(function () {
+Route::middleware(['auth:borrower'])->group(function () {
     Route::prefix('wallets')->group(function () {
-        Route::get('/', [WalletController::class, 'Wallets'])->name('wallet.all');
+        Route::get('/', [WalletController::class, 'Wallets'])->name('wallet.all')->middleware('throttle:10,1');
         Route::get('/transactions', [WalletController::class, 'Transactions'])->name('wallet.transactions');
         Route::get('/banks', [WalletController::class, 'GetBanks'])->name('wallet.GetBanks');
         Route::post('/verify-account', [WalletController::class, 'VerifyAccountNumber'])->name('wallet.VerifyAccountNumber');
@@ -32,6 +32,8 @@ Route::middleware(['auth:borrower', 'throttle:10,1'])->group(function () {
             Route::post('/transfer/usd', [WalletController::class, 'transfertoUsBank'])->name('wallet.usd-usd');
             Route::post('/transfer/usdc', [WalletController::class, 'transferCrypto'])->name('wallet.usdc-usdc');
             Route::post('/transfer/ngn', [WalletController::class, 'TransferNgn'])->name('wallet.ngn-ngn');
+            Route::post('/transfer/usdc/internal', [WalletController::class, 'transferCryptoInternal'])->name('wallet.usdc-usdc-internal');
+            
             Route::get('/beneficiaries', [WalletController::class, 'getBeneficiariesByCurrency'])->name('wallet.getBeneficiariesByCurrency');
             
         });
