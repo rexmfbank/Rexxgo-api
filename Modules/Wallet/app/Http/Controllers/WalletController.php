@@ -1520,7 +1520,6 @@ class WalletController extends Controller
             $wallet->available_balance -= $data['amount'];
             $wallet->ledger_balance -= $data['amount'];
 
-            $wallet->save();
 
             $newTransaction = SavingsTransaction::create([
                 'reference' => $reference,
