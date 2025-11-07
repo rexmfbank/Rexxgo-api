@@ -1501,9 +1501,9 @@ class WalletController extends Controller
             'bridge_wallet_id' => $wallet->bridge_id,
             'currency' => 'usdc',
         ];
-        return $this->success([
-            $destination, $source
-        ]);
+        // return $this->success([
+        //     $destination, $source
+        // ]);
         try {
 
             $reference = "REX-" . $wallet->currency . "-" . date("Ymdhsi") . '-' . $borrower->id . uniqid();
