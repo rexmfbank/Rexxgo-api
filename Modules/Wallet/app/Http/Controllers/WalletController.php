@@ -1511,7 +1511,8 @@ class WalletController extends Controller
             $data = $this->bridgeService->Transfer($borrower->bridge_customer_id, $reference, $source, $destination, $data['amount']);
 
             if (!isset($data['id'])) {
-                return $this->error($data['message'] ?? "Unsupported conversion");
+                $errorMessage = $data['message'] ?? "Unsupported conversion";
+                return $this->error($errorMessage . ' ' .$destintionWallet->bridge_id );
             }
 
             $transferId = $data['id'];
@@ -1543,7 +1544,7 @@ class WalletController extends Controller
 
             $res = new TransactionResource($newTransaction);
 
-            return $this->success($res, 'Transfer initiated successfully. ' . $destintionWallet->bridge_id);
+            return $this->success($res, 'Transfer initiated successfully. ');
         } catch (\RuntimeException $e) {
             return response()->json([
                 'success' => false,
