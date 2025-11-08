@@ -1065,7 +1065,7 @@ class WalletController extends Controller
                 if (!$treasuryWalletUSDC) {
                     return response()->json(['error' => 'An error occured'], 404);
                 }
-
+                return $this->success($treasuryWalletUSDC);
                 if ($treasuryWalletUSDC->available_balance < $convertedAmount) {
                     return response()->json(['error' => 'An error occured'], 404);
                 }
@@ -1093,7 +1093,7 @@ class WalletController extends Controller
 
 
                 $destination = [
-                    'payment_rail' => $destinationWallet['payment_rail'] != "" ? $destinationWallet['payment_rail'] : 'ethereum', //not suppose to be hardcoded
+                    'payment_rail' => $destinationWallet['payment_rail'] != "" ? $destinationWallet['payment_rail'] : 'ethereum',
                     'bridge_wallet_id' => $destinationWallet['bridge_id'],
                     'currency' => "usdc",
                 ];
