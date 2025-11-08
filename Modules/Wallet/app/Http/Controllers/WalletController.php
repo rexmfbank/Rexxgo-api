@@ -1079,6 +1079,7 @@ class WalletController extends Controller
                     "borrower_id" => base64_encode($borrower->id),
                     "pin" => $request->transaction_pin
                 ];
+                return $this->error($amount);
 
                 $creditTreasury = $this->rexBank->SendMoneyInternal($treasuryData);
                 if (!$creditTreasury) {
@@ -1105,7 +1106,6 @@ class WalletController extends Controller
             }
 
             if (!isset($data['id'])) {
-                return $this->error($amount);
                 return $this->error($data['message'] ?? "Unsupported conversion");
             }
 
