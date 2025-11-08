@@ -853,6 +853,77 @@
                 ]
             }
         },
+        "/api/profile/fcm-token": {
+            "post": {
+                "tags": [
+                    "Profile"
+                ],
+                "summary": "Update authenticated user's FCM token",
+                "operationId": "989d9752b6c8872e5c2dbd8b76bbcc22",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "fcm_token": {
+                                        "type": "string",
+                                        "example": "fcm_token_here"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "FCM token updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "FCM token updated successfully"
+                                        },
+                                        "fcm_token": {
+                                            "type": "string",
+                                            "example": "fcm_token_here"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "The fcm_token field is required."
+                                        },
+                                        "errors": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/profile/kyc": {
             "post": {
                 "tags": [

@@ -1111,6 +1111,8 @@ class WalletController extends Controller
             }
 
             $transferId = $data['id'];
+            $treasuryWalletUSDC->decrement('available_balance', $convertedAmount);
+            $treasuryWalletUSDC->decrement('ledger_balance', $convertedAmount);
 
             $treasuryTransaction = SavingsTransaction::create([
                 'reference' => $reference.'treasury',

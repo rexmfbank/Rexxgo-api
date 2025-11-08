@@ -138,6 +138,58 @@ class ProfileController extends Controller
 
     /**
      * @OA\Post(
+     *     path="/api/profile/fcm-token",
+     *     summary="Update authenticated user's FCM token",
+     *     tags={"Profile"},
+     *   security={{"bearerAuth":{}}},
+     *
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="fcm_token", type="string", example="fcm_token_here")
+     *         )
+     *     ),
+     *
+     *     @OA\Response(
+     *         response=200,
+     *         description="FCM token updated successfully",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="message", type="string", example="FCM token updated successfully"),
+     *             @OA\Property(property="fcm_token", type="string", example="fcm_token_here")
+     *         )
+     *     ),
+     *
+     *     @OA\Response(
+     *         response=422,
+     *         description="Validation error",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="message", type="string", example="The fcm_token field is required."),
+     *             @OA\Property(property="errors", type="object")
+     *         )
+     *     )
+     * )
+     */
+    public function updateFcmToken(Request $request)
+    {
+        $request->validate([
+            'fcm_token' => 'required|string|max:512',
+        ]);
+        $borrower = auth()->guard('borrower')->user();
+
+        $updateData = [
+            "fcm_token" => $request->fcm_token, 
+        ];
+        DB::table('borrowers')->where('id', $borrower->id)->update($updateData);
+                    
+
+        return $this->success("FCM token updated successfully");
+    }
+
+    /**
+     * @OA\Post(
      *   path="/api/profile/kyc",
      *   tags={"Profile"},
      *   summary="Start KYC process",
