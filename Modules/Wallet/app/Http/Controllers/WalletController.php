@@ -1090,7 +1090,7 @@ class WalletController extends Controller
 
 
                 $destination = [
-                    'payment_rail' => $destinationWallet['payment_rail'] != "" ? $destinationWallet['payment_rail'] : 'ethereum',
+                    'payment_rail' => "bridge_wallet",
                     'bridge_wallet_id' => $destinationWallet['bridge_id'],
                     'currency' => "usdc",
                 ];
