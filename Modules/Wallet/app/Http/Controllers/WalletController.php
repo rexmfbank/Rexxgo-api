@@ -1072,21 +1072,6 @@ class WalletController extends Controller
                 if ($treasuryWalletUSDC->available_balance < $convertedAmount) {
                     return response()->json(['error' => 'An error occured'], 404);
                 }
-                return $this->success([
-
-                $destination = [
-                    'payment_rail' => $destinationWallet['payment_rail'] != "" ? $destinationWallet['payment_rail'] : 'ethereum',
-                    'bridge_wallet_id' => $destinationWallet['bridge_id'],
-                    'currency' => "usdc",
-                ],
-
-                $source = [
-                    'payment_rail' => 'bridge_wallet',
-                    'bridge_wallet_id' => $treasuryWalletUSDC->bridge_id,
-                    'currency' => 'usdc',
-                ]
-                ]);
-
                 $treasuryData = [
                     "from_account_number" => $sourceWallet->account_number,
                     "to_account_number" => $treasuryWallet->account_number,
