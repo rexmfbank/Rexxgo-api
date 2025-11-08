@@ -1086,14 +1086,6 @@ class WalletController extends Controller
                     return $this->error($response['message'] ?? "Something went wrong");
                 }
 
-                //$ngnTreasury->increment('balance', $amount);
-                $sourceWallet->decrement('available_balance', $amount);
-                $sourceWallet->decrement('ledger_balance', $amount);
-
-                $treasuryWallet->increment('available_balance', $amount);
-                $treasuryWallet->increment('ledger_balance', $amount);
-
-
 
                 $destination = [
                     'payment_rail' => $destinationWallet['payment_rail'] != "" ? $destinationWallet['payment_rail'] : 'ethereum',
