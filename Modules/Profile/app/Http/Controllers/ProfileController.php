@@ -130,7 +130,7 @@ class ProfileController extends Controller
             }
 
         } catch (\Exception $e) {
-            Log::error("Failed to update profile for borrower ID: {$borrower->id}. Error: " . $e->getMessage());
+            
             return $this->error('Failed to update profile: ' . $e->getMessage(), 500);
         }
     }
@@ -229,7 +229,7 @@ class ProfileController extends Controller
                     ], 'Profile updated successfully');
 
         } catch (\Exception $e) {
-            Log::error("Failed to update profile for borrower ID: {$borrower->id}. Error: " . $e->getMessage());
+            
             return $this->error('Failed to update profile: ' . $e->getMessage(), 500);
         }
     }

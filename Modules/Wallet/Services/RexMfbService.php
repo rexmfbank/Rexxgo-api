@@ -22,8 +22,6 @@ class RexMfbService
         ])->get($url);
 
         $body = $response->json();
-            Log::info($body);
-
         return $body;
     }
 

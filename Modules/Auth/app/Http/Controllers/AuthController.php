@@ -192,9 +192,9 @@ class AuthController extends Controller
             
             // Log the result
             if ($savingsResult['success']) {
-                Log::info("Created " . count($savingsResult['accounts']) . " savings accounts for borrower ID: {$borrower->id}");
+                
             } else {
-                Log::error("Failed to create savings accounts for borrower ID: {$borrower->id}. Error: " . $savingsResult['message']);
+                
             }
             
             $data = [
@@ -359,7 +359,7 @@ class AuthController extends Controller
         $borrower->facial_verification_id = $request->input('verification_id');
 
         //find the webkook payload in the webhook log table
-        $webhookLog = WebhookLog::where('webhook_id', $request->input('verification_id'))
+        $webhookLog = Webhook
             ->where('source', 'qoreid')
             ->first();
         if (!$webhookLog) {

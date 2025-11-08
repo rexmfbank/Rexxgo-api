@@ -1007,7 +1007,7 @@ class WalletController extends Controller
                 ];
 
                 $creditTreasury = $this->rexBank->SendMoneyInternal($treasuryData);
-                Log::info($creditTreasury);
+                
                 if (!$creditTreasury) {
                     return $this->error($creditTreasury['message'] ?? "Something went wrong");
                 } elseif (!isset($creditTreasury['status']) || $creditTreasury['status'] != 'success') {
@@ -1035,7 +1035,7 @@ class WalletController extends Controller
                     'currency' => 'usdc',
                 ];
                 $data = $this->bridgeService->Transfer($borrower->bridge_customer_id, $reference, $source, $destination, $convertedAmount);
-                Log::info($data);
+                
             } elseif ($sourceWallet->currency == SavingsProduct::$ngn && $destinationWallet->currency == SavingsProduct::$usdc) {
                 $rate = Rate::where('base_currency', 'NGN')
                     ->where('target_currency', 'USDC')
@@ -1081,12 +1081,12 @@ class WalletController extends Controller
                 ];
                 // return $this->error($convertedAmount);
 
-                // $creditTreasury = $this->rexBank->SendMoneyInternal($treasuryData);
-                // if (!$creditTreasury) {
-                //     return $this->error($response['message'] ?? "Something went wrong");
-                // } elseif (!isset($creditTreasury['status']) || $creditTreasury['status'] != 'success') {
-                //     return $this->error($response['message'] ?? "Something went wrong");
-                // }
+                $creditTreasury = $this->rexBank->SendMoneyInternal($treasuryData);
+                if (!$creditTreasury) {
+                    return $this->error($response['message'] ?? "Something went wrong");
+                } elseif (!isset($creditTreasury['status']) || $creditTreasury['status'] != 'success') {
+                    return $this->error($response['message'] ?? "Something went wrong");
+                }
 
 
                 $destination = [
