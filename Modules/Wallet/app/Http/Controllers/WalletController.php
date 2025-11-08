@@ -1373,7 +1373,7 @@ class WalletController extends Controller
             return $this->error('Customer not found!', 400);
         }
 
-        $wallet = DB::table('savings')->where("borrower_id", $borrower->id)->where("currency", SavingsProduct::$usdc)->first();
+        $wallet = Savings::where("borrower_id", $borrower->id)->where("currency", SavingsProduct::$usdc)->first();
 
         if (!$wallet || $wallet->bridge_id == "") {
             return $this->error('Invalid USD wallet', 400);
@@ -1497,7 +1497,7 @@ class WalletController extends Controller
             return $this->error('Customer not found!', 400);
         }
 
-        $wallet = DB::table('savings')->where("borrower_id", $borrower->id)->where("currency", SavingsProduct::$usdc)->first();
+        $wallet = Savings::where("borrower_id", $borrower->id)->where("currency", SavingsProduct::$usdc)->first();
 
         if (!$wallet || $wallet->bridge_id == "") {
             return $this->error('Invalid USD wallet', 400);
