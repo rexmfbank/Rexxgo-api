@@ -6,6 +6,7 @@
 /storage/*.key
 /storage/pail
 /storage/firebase
+/storage/firebase/*.json
 /vendor
 .env
 .env.backup
