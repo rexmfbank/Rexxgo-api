@@ -33,6 +33,8 @@ Route::middleware(['auth:borrower'])->group(function () {
             Route::post('/transfer/usdc', [WalletController::class, 'transferCrypto'])->name('wallet.usdc-usdc');
             Route::post('/transfer/ngn', [WalletController::class, 'TransferNgn'])->name('wallet.ngn-ngn');
             Route::post('/transfer/usdc/internal', [WalletController::class, 'transferCryptoInternal'])->name('wallet.usdc-usdc-internal');
+            Route::post('/transfer/usd/internal', [WalletController::class, 'transferUsdInternal'])->name('wallet.usd-usd-internal');
+            
             
             Route::get('/beneficiaries', [WalletController::class, 'getBeneficiariesByCurrency'])->name('wallet.getBeneficiariesByCurrency');
             

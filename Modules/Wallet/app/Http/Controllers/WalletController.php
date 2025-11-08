@@ -1659,6 +1659,142 @@ class WalletController extends Controller
         }
     }
 
+
+
+    /**
+     * @OA\Post(
+     *     path="/api/wallets/transfer/usd/internal",
+     *     summary="Transfer USD from Between REX-GO users",
+     *     tags={"Wallet"},
+     *    security={{"bearerAuth":{}}},
+     * 
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"amount","user_email", "transaction_pin"},
+     *             @OA\Property(property="amount", type="string", example="25.00"),
+     *             @OA\Property(property="transaction_pin", type="string", example="1234"),
+     *             @OA\Property(property="user_email", type="string", example="")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Transfer successful"
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="Error processing request"
+     *     )
+     * )
+     */
+    public function transferUsdInternal(Request $request)
+    {
+        $data = $request->validate([
+            'amount' => 'required|string',
+            'user_email' => 'required|string',
+            'transaction_pin' => 'required|string'
+        ]);
+
+        if (!auth()->guard('borrower')->check()) {
+            return $this->error('Invalid access token, Please Login', 401);
+        }
+
+        $borrower = Borrower::where("id", auth()->guard('borrower')->user()->id)->first();
+
+        if (!$borrower) {
+            return $this->error('Customer not found!', 400);
+        }
+
+        $wallet = Savings::where("borrower_id", $borrower->id)->where("currency", SavingsProduct::$usd)->first();
+
+        if (!$wallet || $wallet->bridge_id == "") {
+            return $this->error('Invalid USD wallet', 400);
+        }
+
+        if (!Hash::check($data['transaction_pin'], $borrower->pin)) {
+            return $this->error('Invalid transaction pin', 400);
+        }
+
+        if ($wallet->available_balance < $data['amount']) {
+            return $this->error("Insufficient balance", 400);
+        }
+
+        $destinationUser = Borrower::where("email", $data['user_email'])->first();
+        if (!$destinationUser) {
+            return $this->error("Invalid user selected", 400);
+        }
+
+        $destintionWallet = DB::table('savings')->where("borrower_id", $destinationUser->id)->where("currency", SavingsProduct::$usd)->first();
+
+        if (!$destintionWallet || $destintionWallet->bridge_id == "") {
+            return $this->error('Invalid destination wallet', 400);
+        }
+
+        $destination = [
+            'payment_rail' => $destintionWallet['destination_rail'] ?? "ethereum",
+            'bridge_wallet_id' => $destintionWallet['destination_id'],
+            'currency' => $destintionWallet['destination_currency'],
+        ];
+
+        $source = [
+            'payment_rail' => 'bridge_wallet',
+            'bridge_wallet_id' => $wallet->destination_id, //bridge aumatically route usd transaction to a crypto wallet called desitination, a Bridge Wallet
+            'currency' => 'usdc',
+        ];
+         
+        try {
+
+            $reference = "REX-" . $wallet->currency . "-" . date("Ymdhsi") . '-' . $borrower->id . uniqid();
+
+            $data = $this->bridgeService->Transfer($borrower->bridge_customer_id, $reference, $source, $destination, $data['amount']);
+
+            if (!isset($data['id'])) {
+                $errorMessage = $data['message'] ?? "Unsupported conversion";
+                return $this->error($errorMessage . ' ' .$destintionWallet->bridge_id );
+            }
+
+            $transferId = $data['id'];
+            $amount = $data['amount'];
+            $wallet->decrement('available_balance', $amount);
+            $wallet->decrement('ledger_balance', $amount);
+
+
+            $newTransaction = SavingsTransaction::create([
+                'reference' => $reference,
+                'borrower_id' => $borrower->id,
+                'savings_id' => $wallet->id,
+                'transaction_amount' => $amount,
+                'balance' => $wallet->available_balance,
+                'transaction_date' => now()->toDateString(),
+                'transaction_time' => now()->toTimeString(),
+                'transaction_type' => 'debit',
+                'transaction_description' => "Wallet transfer to {$destinationUser->first_name} {$destinationUser->first_name}",
+                'debit' => $amount,
+                'credit' => 0,
+                'category' => 'fund_converted',
+                'status_id' => 'pending',
+                'currency' => $wallet->currency ?? 'USD',
+                'external_response' => json_encode($data, JSON_PRETTY_PRINT),
+                'external_tx_id' => $transferId . '_init',
+                'provider' => 'bridge',
+            ]);
+
+            $res = new TransactionResource($newTransaction);
+
+            return $this->success($res, 'Transfer initiated successfully. ');
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 400);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Server Error: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
     /**
      * @OA\Post(
      *     path="/api/wallets/transfer/ngn",

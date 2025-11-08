@@ -1722,6 +1722,57 @@
                 ]
             }
         },
+        "/api/wallets/transfer/usd/internal": {
+            "post": {
+                "tags": [
+                    "Wallet"
+                ],
+                "summary": "Transfer USD from Between REX-GO users",
+                "operationId": "bd7bbdad0f445c9e2d3b19029a386a3c",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "amount",
+                                    "user_email",
+                                    "transaction_pin"
+                                ],
+                                "properties": {
+                                    "amount": {
+                                        "type": "string",
+                                        "example": "25.00"
+                                    },
+                                    "transaction_pin": {
+                                        "type": "string",
+                                        "example": "1234"
+                                    },
+                                    "user_email": {
+                                        "type": "string",
+                                        "example": ""
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Transfer successful"
+                    },
+                    "400": {
+                        "description": "Error processing request"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/wallets/transfer/ngn": {
             "post": {
                 "tags": [
