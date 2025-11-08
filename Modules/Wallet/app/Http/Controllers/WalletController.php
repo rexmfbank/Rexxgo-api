@@ -1079,14 +1079,14 @@ class WalletController extends Controller
                     "borrower_id" => base64_encode($borrower->id),
                     "pin" => $request->transaction_pin
                 ];
-                return $this->error($convertedAmount);
+                // return $this->error($convertedAmount);
 
-                $creditTreasury = $this->rexBank->SendMoneyInternal($treasuryData);
-                if (!$creditTreasury) {
-                    return $this->error($response['message'] ?? "Something went wrong");
-                } elseif (!isset($creditTreasury['status']) || $creditTreasury['status'] != 'success') {
-                    return $this->error($response['message'] ?? "Something went wrong");
-                }
+                // $creditTreasury = $this->rexBank->SendMoneyInternal($treasuryData);
+                // if (!$creditTreasury) {
+                //     return $this->error($response['message'] ?? "Something went wrong");
+                // } elseif (!isset($creditTreasury['status']) || $creditTreasury['status'] != 'success') {
+                //     return $this->error($response['message'] ?? "Something went wrong");
+                // }
 
 
                 $destination = [
@@ -1100,6 +1100,7 @@ class WalletController extends Controller
                     'bridge_wallet_id' => $treasuryWalletUSDC->bridge_id,
                     'currency' => 'usdc',
                 ];
+                $convertedAmount = number_format($convertedAmount, 6, '.', '');
                 $data = $this->bridgeService->Transfer($borrower->bridge_customer_id, $reference, $source, $destination, $convertedAmount);
             } else {
                 return $this->error("Unsupported conversion");
