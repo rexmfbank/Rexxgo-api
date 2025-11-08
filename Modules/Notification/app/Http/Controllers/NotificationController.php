@@ -142,4 +142,5 @@ class NotificationController extends Controller
             'branch_id' => $newNotification['branch_id'] ?? null,
         ]);
     }
+
 }
