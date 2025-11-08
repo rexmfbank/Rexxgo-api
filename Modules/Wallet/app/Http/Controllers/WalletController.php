@@ -1081,7 +1081,6 @@ class WalletController extends Controller
                 ];
 
                 $creditTreasury = $this->rexBank->SendMoneyInternal($treasuryData);
-                return $this->success($creditTreasury);
                 if (!$creditTreasury) {
                     return $this->error($response['message'] ?? "Something went wrong");
                 } elseif (!isset($creditTreasury['status']) || $creditTreasury['status'] != 'success') {
