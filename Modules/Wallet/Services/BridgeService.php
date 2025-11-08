@@ -45,7 +45,7 @@ class BridgeService
                 ->post($baseUrl . '/v0/kyc_links', $payload);
         } catch (\Throwable $e) {
 
-            
+            Log::error('Failed to contact Bridge: ' . $e->getMessage());
             throw new \RuntimeException('Failed to contact Bridge: ' . $e->getMessage());
         }
 
@@ -90,7 +90,7 @@ class BridgeService
      */
     public function createUsdWallet(array $data): ?array
     {
-        
+        Log::info("Payload: " . json_encode($data));
         $customerId = $data['customer_id'] ?? null;
 
         if (!$customerId) {
@@ -122,14 +122,14 @@ class BridgeService
                 ->acceptJson()
                 ->post("{$baseUrl}/v0/customers/{$customerId}/virtual_accounts", $payload);
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\
+            \Illuminate\Support\Facades\Log::error('Failed to contact Bridge (createUsdWallet): ' . $e->getMessage());
             throw new \RuntimeException('Network error contacting Bridge.');
         }
 
         if ($response->failed()) {
             $message = 'API error: ' . $response->status();
             $body = $response->json();
-            \Illuminate\Support\Facades\
+            \Illuminate\Support\Facades\Log::error(json_encode($body));
 
             if (is_array($body)) {
                 $message .= ' ' . $body["message"];
@@ -160,7 +160,7 @@ class BridgeService
 
         if ($response->failed()) {
             $body = $response->json();
-            
+            Log::info(json_encode($body));
             $message = $body['message'] ?? $response->body();
             throw new \RuntimeException("Bridge error: {$message}");
         }
@@ -180,7 +180,7 @@ class BridgeService
 
         if ($response->failed()) {
             $body = $response->json();
-            \Illuminate\Support\Facades\
+            \Illuminate\Support\Facades\Log::error('Bridge getVirtualAccount error', $body);
             $message = $body['message'] ?? $response->body();
             throw new \RuntimeException("Bridge error: {$message}");
         }
@@ -200,7 +200,7 @@ class BridgeService
 
         if ($response->failed()) {
             $body = $response->json();
-            \Illuminate\Support\Facades\
+            \Illuminate\Support\Facades\Log::error('Bridge getVirtualAccount error', $body);
             $message = $body['message'] ?? $response->body();
             throw new \RuntimeException("Bridge error: {$message} - {$virtualAccountId}");
         }
@@ -260,7 +260,7 @@ class BridgeService
         ])->post("{$baseUrl}/transfers", $payload);
 
         if (!$response->successful()) {
-            
+            Log::error('Bridge transfer error: ' . $response->body() . '-' . 'api kye ' . $apiKey);
             return [
                 'success' => false,
                 'status' => $response->status(),
@@ -289,7 +289,7 @@ class BridgeService
             "client_reference_id" => $reference
         ];
 
-        
+        Log::info(json_encode($payload));
         $response = \Illuminate\Support\Facades\Http::withHeaders([
             'Api-Key' => $apiKey,
             'Idempotency-Key' => $idempotencyKey,
@@ -298,7 +298,7 @@ class BridgeService
 
         if ($response->failed()) {
             $body = $response->json();
-            
+            Log::info($body);
             $message = $body['message'] ?? 'Something went wrong';
 
             if (isset($body['source']['key']) && is_array($body['source']['key'])) {
@@ -345,7 +345,7 @@ class BridgeService
         $body = $response->json();
 
         if ($response->failed()) {
-            
+            Log::error('Bridge externalAccount error', $body);
             return ["error" => $body['message'] ?? 'Unknown error'];
         }
 
@@ -372,8 +372,8 @@ class BridgeService
 
         $url = "{$baseUrl}/v0/customers/{$customerId}/liquidation_addresses";
 
-        
-        
+        Log::info("Bridge Liquidation Request URL: {$url}");
+        Log::info("Bridge Liquidation Payload:", $payload);
 
         $response = Http::withHeaders([
             'Api-Key' => $apiKey,
@@ -382,7 +382,7 @@ class BridgeService
         ])->post($url, $payload);
 
         $body = $response->json();
-            
+            Log::info($body);
         if ($response->failed()) {
             throw new \RuntimeException($body['message'] ?? "Bridge service error");
         }
