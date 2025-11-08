@@ -1083,7 +1083,7 @@ class WalletController extends Controller
 
                 $source = [
                     'payment_rail' => 'bridge_wallet',
-                    'bridge_wallet_id' => $treasuryWalletUSD->bridge_id,
+                    'bridge_wallet_id' => $treasuryWalletUSD->destination_id,
                     'currency' => 'usdc',
                 ];
                 $convertedAmount = number_format($convertedAmount, 2, '.', '');
@@ -1176,7 +1176,7 @@ class WalletController extends Controller
 
                 $source = [
                     'payment_rail' => 'bridge_wallet',
-                    'bridge_wallet_id' => $treasuryWalletUSDC->destination_id,
+                    'bridge_wallet_id' => $treasuryWalletUSDC->bridge_id,
                     'currency' => 'usdc',
                 ];
                 $convertedAmount = number_format($convertedAmount, 2, '.', '');
