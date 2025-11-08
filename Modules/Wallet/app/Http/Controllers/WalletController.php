@@ -1076,7 +1076,7 @@ class WalletController extends Controller
                     "from_account_number" => $sourceWallet->account_number,
                     "to_account_number" => $treasuryWallet->account_number,
                     "amount" => $amount,
-                    "borrower_id" => $borrower->id,
+                    "borrower_id" => base64_encode($borrower->id),
                     "pin" => $request->transaction_pin
                 ];
 
