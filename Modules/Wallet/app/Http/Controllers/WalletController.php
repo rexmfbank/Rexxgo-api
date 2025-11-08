@@ -1079,7 +1079,7 @@ class WalletController extends Controller
                     "borrower_id" => base64_encode($borrower->id),
                     "pin" => $request->transaction_pin
                 ];
-                return $this->error($amount);
+                return $this->error($convertedAmount);
 
                 $creditTreasury = $this->rexBank->SendMoneyInternal($treasuryData);
                 if (!$creditTreasury) {
