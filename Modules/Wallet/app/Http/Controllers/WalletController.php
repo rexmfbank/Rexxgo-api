@@ -1100,7 +1100,7 @@ class WalletController extends Controller
                     'bridge_wallet_id' => $treasuryWalletUSDC->bridge_id,
                     'currency' => 'usdc',
                 ];
-                $convertedAmount = number_format($convertedAmount, 6, '.', '');
+                $convertedAmount = number_format($convertedAmount, 2, '.', '');
                 $data = $this->bridgeService->Transfer($borrower->bridge_customer_id, $reference, $source, $destination, $convertedAmount);
             } else {
                 return $this->error("Unsupported conversion");
