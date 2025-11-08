@@ -1046,6 +1046,10 @@ class WalletController extends Controller
                 }
 
                 $convertedAmount = $amount * $rate->rate;
+
+                if($convertedAmount < 1){
+                    return response()->json(['error' => $convertedAmount . ' ' . $destinationWallet->currency . ' cannot be transferred. Minimum is 1'.$destinationWallet->currency], 404);
+                }
                 $ngnTreasury = Treasury::where('currency', 'NGN')->first();
                 if (!$ngnTreasury) {
                     return response()->json(['error' => 'An error occured'], 404);
