@@ -1404,9 +1404,41 @@ class WalletController extends Controller
             $reference = "REX-" . $wallet->currency . "-" . date("Ymdhsi") . '-' . $borrower->id . uniqid();
 
             $data = $this->bridgeService->Transfer($borrower->bridge_customer_id, $reference, $source, $destination, $data['amount']);
-            return response()->json([
-                "message" => "Transfer successful",
+            
+            if (!isset($data['id'])) {
+                $errorMessage = $data['message'] ?? "Unsupported conversion";
+                return $this->error($errorMessage );
+            }
+
+            $transferId = $data['id'];
+            $amount = $data['amount'];
+            $wallet->decrement('available_balance', $amount);
+            $wallet->decrement('ledger_balance', $amount);
+
+
+            $newTransaction = SavingsTransaction::create([
+                'reference' => $reference,
+                'borrower_id' => $borrower->id,
+                'savings_id' => $wallet->id,
+                'transaction_amount' => $amount,
+                'balance' => $wallet->available_balance,
+                'transaction_date' => now()->toDateString(),
+                'transaction_time' => now()->toTimeString(),
+                'transaction_type' => 'debit',
+                'transaction_description' => "USDC transfer to ".substr($data['destination_address'], -5),
+                'debit' => $amount,
+                'credit' => 0,
+                'category' => 'fund_converted',
+                'status_id' => 'pending',
+                'currency' => $wallet->currency ?? 'USD',
+                'external_response' => json_encode($data, JSON_PRETTY_PRINT),
+                'external_tx_id' => $transferId . '_init',
+                'provider' => 'bridge',
             ]);
+
+            $res = new TransactionResource($newTransaction);
+
+            return $this->success($res);
         } catch (\RuntimeException $e) {
             return response()->json([
                 'success' => false,
@@ -1517,8 +1549,8 @@ class WalletController extends Controller
 
             $transferId = $data['id'];
             $amount = $data['amount'];
-            $wallet->available_balance -= $data['amount'];
-            $wallet->ledger_balance -= $data['amount'];
+            $wallet->decrement('available_balance', $amount);
+            $wallet->decrement('ledger_balance', $amount);
 
 
             $newTransaction = SavingsTransaction::create([
