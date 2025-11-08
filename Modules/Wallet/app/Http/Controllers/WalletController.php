@@ -1112,32 +1112,27 @@ class WalletController extends Controller
 
             $transferId = $data['id'];
 
-            $sourceWallet->available_balance -= $amount;
-            $sourceWallet->ledger_balance -= $amount;
-
-            $sourceWallet->save();
-
-            $newTransaction = SavingsTransaction::create([
-                'reference' => $reference,
+            $treasuryTransaction = SavingsTransaction::create([
+                'reference' => $reference.'treasury',
                 'borrower_id' => $userId,
-                'savings_id' => $sourceWallet->id,
-                'transaction_amount' => $amount,
-                'balance' => $sourceWallet->available_balance,
+                'savings_id' => $treasuryWalletUSDC->id,
+                'transaction_amount' => $convertedAmount,
+                'balance' => $treasuryWalletUSDC->available_balance,
                 'transaction_date' => now()->toDateString(),
                 'transaction_time' => now()->toTimeString(),
                 'transaction_type' => 'debit',
-                'transaction_description' => "Wallet transfer to {$destinationWallet->name}",
-                'debit' => $amount,
+                'transaction_description' => "Wallet transfer to {$borrower->first_name} {$borrower->last_name}",
+                'debit' => $convertedAmount,
                 'credit' => 0,
                 'category' => 'fund_converted',
                 'status_id' => 'pending',
-                'currency' => $sourceWallet->currency ?? 'USD',
+                'currency' => $treasuryWalletUSDC->currency ?? 'USD',
                 'external_response' => json_encode($data, JSON_PRETTY_PRINT),
                 'external_tx_id' => $transferId . '_init',
                 'provider' => 'bridge',
             ]);
 
-            $res = new TransactionResource($newTransaction);
+            $res = new TransactionResource($treasuryTransaction);
 
             return $this->success($res, 'Transfer initiated successfully.');
         } catch (\RuntimeException $e) {
