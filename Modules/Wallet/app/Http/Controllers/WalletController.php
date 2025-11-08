@@ -1105,6 +1105,7 @@ class WalletController extends Controller
             }
 
             if (!isset($data['id'])) {
+                return $this->error($amount);
                 return $this->error($data['message'] ?? "Unsupported conversion");
             }
 
