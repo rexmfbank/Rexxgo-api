@@ -11,9 +11,20 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Modules\Notification\app\Http\Controllers\NotificationController;
+use Modules\Notification\Services\FirebaseService;
+use Modules\Wallet\Services\RexMfbService;
 
 class BridgeWebhookController extends Controller
 {
+    protected $rexBank;
+    protected $firebaseService;
+
+    // 2. Inject the service into the constructor
+    public function __construct(RexMfbService $rexBank, FirebaseService $firebaseService)
+    {
+        $this->rexBank = $rexBank;
+        $this->firebaseService = $firebaseService;
+    }
 
     /**
      * Handle the incoming Bridge webhook request.
@@ -482,7 +493,20 @@ class BridgeWebhookController extends Controller
         $isTransactionInitiatedHere = SavingsTransaction::where("reference", $clientReferenceId)->first();
         if($isTransactionInitiatedHere){
             $isTransactionInitiatedHere->status_id = $status;
+            if(!empty($isTransactionInitiatedHere->treasury_transfer_details)){
+                $rexPayload = $isTransactionInitiatedHere->treasury_transfer_details;
+
+                $creditTreasury = $this->rexBank->SendMoneyInternal($rexPayload);
+                if (!$creditTreasury) {
+                    //trigger notification to admin
+                } elseif (!isset($creditTreasury['status']) || $creditTreasury['status'] != 'success') {
+                    //trigger notification to admin
+                } elseif (isset($creditTreasury['status']) && $creditTreasury['status'] == 'success') {
+                    $isTransactionInitiatedHere->treasury_transfer_details = "";
+                }
+            }
             $isTransactionInitiatedHere->save();
+
         }
         $wallet = Savings::where('account_number', $toAddress)->orWhere('destination_address', $toAddress)->first();
 
@@ -511,8 +535,6 @@ class BridgeWebhookController extends Controller
             $finalWalletBalance += $amount;
             $wallet->increment('available_balance', $amount);
             $wallet->increment('ledger_balance', $amount);
-
-           
         } 
         $category = "fund_received";
         $details = [
@@ -567,6 +589,9 @@ class BridgeWebhookController extends Controller
                 'company_id' => null,
                 'branch_id' => null,
             ];
+            if(!empty($borrower->fcm_token)){
+                $this->firebaseService->sendPush($borrower->fcm_token, "Fund Received", $notificationMessage);
+            }
 
             $notificationController->createNotification($notificationRequest);
          }

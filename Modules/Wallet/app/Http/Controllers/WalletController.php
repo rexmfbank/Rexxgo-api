@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Modules\Notification\app\Http\Controllers\NotificationController;
+use Modules\Notification\Services\FirebaseService;
 use Modules\Wallet\app\Http\Requests\ExternalAccountRequest;
 use Modules\Wallet\app\Http\Resources\WalletResource;
 use Modules\Wallet\app\Http\Resources\TransactionResource;
@@ -30,12 +31,14 @@ class WalletController extends Controller
     use ApiResponse;
     protected $bridgeService;
     protected $rexBank;
+    protected $firebaseService;
 
     // 2. Inject the service into the constructor
-    public function __construct(BridgeService $bridgeService, RexMfbService $rexBank)
+    public function __construct(BridgeService $bridgeService, RexMfbService $rexBank, FirebaseService $firebaseService)
     {
         $this->bridgeService = $bridgeService;
         $this->rexBank = $rexBank;
+        $this->firebaseService = $firebaseService;
     }
 
     /**
@@ -1109,7 +1112,7 @@ class WalletController extends Controller
                     'credit' => 0,
                     'category' => 'fund_converted',
                     'status_id' => 'pending',
-                    'currency' => $treasuryWalletUSDC->currency ?? 'USD',
+                    'currency' => $treasuryWalletUSD->currency ?? 'USD',
                     'external_response' => json_encode($data, JSON_PRETTY_PRINT),
                     'external_tx_id' => $transferId . '_init',
                     'provider' => 'bridge',
@@ -1207,6 +1210,101 @@ class WalletController extends Controller
                     'external_tx_id' => $transferId . '_init',
                     'provider' => 'bridge',
                 ]);
+            } elseif ($sourceWallet->currency == SavingsProduct::$usdc && $destinationWallet->currency == SavingsProduct::$ngn) {
+
+                $rate = Rate::where('base_currency', 'USDC')
+                    ->where('target_currency', 'NGN')
+                    ->first();
+
+                if (!$rate) {
+                    return response()->json(['error' => 'Conversion rate not found.'], 404);
+                }
+
+                $convertedAmount = $amount / $rate->rate;
+
+                if($convertedAmount < 1500){
+                    return response()->json(['error' => $convertedAmount . ' ' . $destinationWallet->currency . ' cannot be transferred. Minimum is 1'.$destinationWallet->currency], 404);
+                }
+                if (empty($destinationWallet->account_number)) {
+                    return response()->json(['error' => 'Invalid destination wallet'], 404);
+                }
+                
+                $usdcTreasury = Treasury::where('currency', 'USDC')->first();
+                if (!$usdcTreasury) {
+                    return response()->json(['error' => 'An error occured'], 404);
+                }
+
+                $treasuryWalletUSDC = Savings::where("id", $usdcTreasury->savings_id)->first();
+                if (!$treasuryWalletUSDC) {
+                    return response()->json(['error' => 'An error occured'], 404);
+                }
+                if ($treasuryWalletUSDC->available_balance < $convertedAmount) {
+                    return response()->json(['error' => 'An error occured'], 404);
+                }
+
+
+                $ngnTreasury = Treasury::where('currency', 'NGN')->first();
+                if (!$ngnTreasury) {
+                    return response()->json(['error' => 'An error occured'], 404);
+                }
+
+                $treasuryWalletNGN = Savings::where("id", $ngnTreasury->savings_id)->first();
+                if (!$treasuryWalletNGN) {
+                    return response()->json(['error' => 'An error occured'], 404);
+                }
+
+                if ($treasuryWalletNGN->available_balance < $convertedAmount) {
+                    return response()->json(['error' => 'An error occured'], 404);
+                }
+
+                $destination = [
+                    'payment_rail' => $treasuryWalletUSDC['destination_rail'] ?? "ethereum",
+                    'bridge_wallet_id' => $treasuryWalletUSDC['bridge_id'],
+                    'currency' => "usdc",
+                ];
+
+                $source = [
+                    'payment_rail' => 'bridge_wallet',
+                    'bridge_wallet_id' => $sourceWallet->bridge_id,
+                    'currency' => 'usdc',
+                ];
+
+                $data = $this->bridgeService->Transfer($borrower->bridge_customer_id, $reference, $source, $destination, $amount);
+
+                $transferId = $data['id'];
+
+                $sourceWallet->available_balance -= $amount;
+                $sourceWallet->ledger_balance -= $amount;
+
+                $sourceWallet->save();
+                
+                $newTransaction = SavingsTransaction::create([
+                    'reference' => $reference,
+                    'borrower_id' => $userId,
+                    'savings_id' => $sourceWallet->id,
+                    'transaction_amount' => $amount,
+                    'balance' => $sourceWallet->available_balance,
+                    'transaction_date' => now()->toDateString(),
+                    'transaction_time' => now()->toTimeString(),
+                    'transaction_type' => 'debit',
+                    'transaction_description' => "Wallet transfer to {$destinationWallet->name}",
+                    'debit' => $amount,
+                    'credit' => 0,
+                    'category' => 'fund_converted',
+                    'status_id' => 'pending',
+                    'currency' => $sourceWallet->currency ?? 'USD',
+                    'external_response' => json_encode($data, JSON_PRETTY_PRINT),
+                    'external_tx_id' => $transferId . '_init',
+                    "treasury_transfer_details" => [
+                        "from_account_number" => $treasuryWalletNGN->account_number,
+                        "to_account_number" => $destinationWallet->account_number,
+                        "amount" => $convertedAmount,
+                        "borrower_id" => base64_encode($borrower->id),
+                        "pin" => $request->transaction_pin
+                    ],
+                    'provider' => 'bridge',
+                ]);
+                $res = new TransactionResource($newTransaction);
             } else {
                 return $this->error("Unsupported conversion");
             }
@@ -1292,7 +1390,7 @@ class WalletController extends Controller
             return $this->error('Customer not found!', 400);
         }
 
-        $wallet = DB::table('savings')->where("borrower_id", $borrower->id)->where("currency", SavingsProduct::$usd)->first();
+        $wallet = Savings::where("borrower_id", $borrower->id)->where("currency", SavingsProduct::$usd)->first();
 
         if (!$wallet || $wallet->bridge_id == "" || $wallet->account_number == "") {
             return $this->error('Invalid USD wallet', 400);
@@ -1357,7 +1455,9 @@ class WalletController extends Controller
             }
 
             // /** ✅ 3. Deduct wallet */
-            $wallet->decrementBalance($data['amount']);
+            $amount = $data['amount'];
+            $wallet->decrement('available_balance', $amount);
+            $wallet->decrement('ledger_balance', $amount);
 
 
             $notificationMessage = 'You transfered USD' . $data['amount'] . ' to ' . $beneficiary['account_owner_name'] . '.';
@@ -1376,6 +1476,9 @@ class WalletController extends Controller
 
             $notificationController->createNotification($notificationRequest);
 
+            if(!empty($borrower->fcm_token)){
+                $this->firebaseService->sendPush($borrower->fcm_token, "Debit Alert", $notificationMessage);
+            }
             return response()->json([
                 "message" => "Transfer successful",
                 "external_account" => $externalAccountResponse,
@@ -1484,7 +1587,9 @@ class WalletController extends Controller
             $amount = $data['amount'];
             $wallet->decrement('available_balance', $amount);
             $wallet->decrement('ledger_balance', $amount);
+            
 
+            
 
             $newTransaction = SavingsTransaction::create([
                 'reference' => $reference,
@@ -1505,6 +1610,26 @@ class WalletController extends Controller
                 'external_tx_id' => $transferId . '_init',
                 'provider' => 'bridge',
             ]);
+
+            $notificationMessage = 'You transfered USDC' . $data['amount'] . ' to ' .substr($data['destination_address'], -5);
+            $notificationController = new NotificationController();
+            $notificationRequest = [
+                'type' => 'transaction',
+                'notifiable_type' => 'transaction',
+                'borrower_id' => $borrower->id,
+                'data' => [
+                    'message' => $notificationMessage,
+                    'data' => $newTransaction,
+                ],
+                'company_id' => null,
+                'branch_id' => null,
+            ];
+
+            $notificationController->createNotification($notificationRequest);
+
+            if(!empty($borrower->fcm_token)){
+                $this->firebaseService->sendPush($borrower->fcm_token, "Debit Alert", $notificationMessage);
+            }
 
             $res = new TransactionResource($newTransaction);
 
@@ -1642,6 +1767,25 @@ class WalletController extends Controller
                 'external_tx_id' => $transferId . '_init',
                 'provider' => 'bridge',
             ]);
+            $notificationMessage = 'You transfered USDC' . $data['amount'] . ' to ' .$destinationUser->first_name. ' ' .$destinationUser->first_name;
+            $notificationController = new NotificationController();
+            $notificationRequest = [
+                'type' => 'transaction',
+                'notifiable_type' => 'transaction',
+                'borrower_id' => $borrower->id,
+                'data' => [
+                    'message' => $notificationMessage,
+                    'data' => $newTransaction,
+                ],
+                'company_id' => null,
+                'branch_id' => null,
+            ];
+
+            $notificationController->createNotification($notificationRequest);
+
+            if(!empty($borrower->fcm_token)){
+                $this->firebaseService->sendPush($borrower->fcm_token, "Debit Alert", $notificationMessage);
+            }
 
             $res = new TransactionResource($newTransaction);
 
@@ -1778,6 +1922,26 @@ class WalletController extends Controller
                 'external_tx_id' => $transferId . '_init',
                 'provider' => 'bridge',
             ]);
+
+            $notificationMessage = 'You transfered USD' . $data['amount'] . ' to ' .$destinationUser->first_name. ' ' .$destinationUser->first_name;
+            $notificationController = new NotificationController();
+            $notificationRequest = [
+                'type' => 'transaction',
+                'notifiable_type' => 'transaction',
+                'borrower_id' => $borrower->id,
+                'data' => [
+                    'message' => $notificationMessage,
+                    'data' => $newTransaction,
+                ],
+                'company_id' => null,
+                'branch_id' => null,
+            ];
+
+            $notificationController->createNotification($notificationRequest);
+
+            if(!empty($borrower->fcm_token)){
+                $this->firebaseService->sendPush($borrower->fcm_token, "Debit Alert", $notificationMessage);
+            }
 
             $res = new TransactionResource($newTransaction);
 
