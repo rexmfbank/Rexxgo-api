@@ -7,12 +7,12 @@ use Kreait\Firebase\Contract\Messaging;
 
 class FirebaseService
 {
-    protected Messaging $messaging;
+    // protected Messaging $messaging;
 
-    public function __construct(Messaging $messaging)
-    {
-        $this->messaging = $messaging;
-    }
+    // public function __construct(Messaging $messaging)
+    // {
+    //     $this->messaging = $messaging;
+    // }
 
     /**
      * Send push notification to a device
@@ -24,12 +24,13 @@ class FirebaseService
      */
     public function sendPush(string $token, string $title, string $body, array $data = [])
     {
-        $notification = Notification::create($title, $body);
+        // $notification = Notification::create($title, $body);
 
-        $message = CloudMessage::withTarget('token', $token)
-            ->withNotification($notification)
-            ->withData($data);
+        // $message = CloudMessage::withTarget('token', $token)
+        //     ->withNotification($notification)
+        //     ->withData($data);
 
-        return $this->messaging->send($message);
+        // return $this->messaging->send($message);
+        return "";
     }
 }
