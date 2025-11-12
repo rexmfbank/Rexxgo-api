@@ -1519,6 +1519,10 @@
                         "application/json": {
                             "schema": {
                                 "properties": {
+                                    "wallet_id": {
+                                        "type": "string",
+                                        "example": ""
+                                    },
                                     "currency": {
                                         "type": "string",
                                         "example": "usd"
@@ -1626,9 +1630,14 @@
                                     "amount",
                                     "destination_address",
                                     "network",
-                                    "transaction_pin"
+                                    "transaction_pin",
+                                    "wallet_id"
                                 ],
                                 "properties": {
+                                    "wallet_id": {
+                                        "type": "string",
+                                        "example": ""
+                                    },
                                     "amount": {
                                         "type": "string",
                                         "example": "25.00"

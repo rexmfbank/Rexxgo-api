@@ -14,6 +14,7 @@ class ExternalAccountRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'wallet_id' => 'required|string',
             'currency' => 'required|string|in:USD,usd',
             'bank_name' => 'required|string|max:100',
             'account_owner_name' => 'required|string|max:100',
