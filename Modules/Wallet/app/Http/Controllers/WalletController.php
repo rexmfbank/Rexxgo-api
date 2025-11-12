@@ -1923,7 +1923,7 @@ class WalletController extends Controller
             $wallet->decrement('available_balance', $amount);
             $wallet->decrement('ledger_balance', $amount);
             
-             SavingsTransaction::create([
+             $newTransaction = SavingsTransaction::create([
                 'reference' => $reference,
                 'borrower_id' => $borrower->id,
                 'savings_id' => $wallet->id,
