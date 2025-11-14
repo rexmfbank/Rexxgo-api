@@ -25,8 +25,7 @@ class ExternalAccountRequest extends FormRequest
             'account.checking_or_savings' => 'required|in:checking,savings',
 
             'address.street_line_1' => [
-                'required', 'string', 'min:3', 'max:35',
-                'regex:/\d+/', // must contain a number
+                'required', 'string', 'min:3',
                 'not_regex:/P\.?O\.?\s?Box/i',
                 'not_regex:/PMB/i'
             ],
