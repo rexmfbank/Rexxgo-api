@@ -2512,13 +2512,13 @@ class WalletController extends Controller
             
             $destination = [
                 'payment_rail' => $treasuryWallet['destination_rail'] ?? "ethereum",
-                'bridge_wallet_id' => $treasuryWallet['destination_id'],
+                'bridge_wallet_id' => $treasuryWallet['bridge_id'],
                 'currency' => "usdc",
             ];
 
             $source = [
                 'payment_rail' => 'bridge_wallet',
-                'bridge_wallet_id' => $wallet->destination_id, //bridge aumatically route usd transaction to a crypto wallet called desitination, a Bridge Wallet
+                'bridge_wallet_id' => $wallet->bridge_id, //bridge aumatically route usd transaction to a crypto wallet called desitination, a Bridge Wallet
                 'currency' => 'usdc',
             ];
 
