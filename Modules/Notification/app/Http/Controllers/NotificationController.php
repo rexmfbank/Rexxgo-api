@@ -3,6 +3,7 @@
 namespace Modules\Notification\app\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Models\Borrower;
 use App\Models\Notification;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
@@ -125,6 +126,51 @@ class NotificationController extends Controller
             ->update(['read_at' => now()]);
 
         return $this->success([], 'All notifications marked as read', 200);
+    }
+
+
+
+    /**
+     * @OA\Post(
+     *     path="/api/notifications/send-push",
+     *     tags={"Notifications"},
+     *     summary="Send push notification to a user",
+     *     security={{"bearerAuth":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"user_email", "title", "message"},
+     *             @OA\Property(property="user_email", type="string", example="someone@example.com"),
+     *             @OA\Property(property="title", type="string", example="Hello"),
+     *             @OA\Property(property="message", type="string", example="Greetings")
+     *         )
+     *     ),
+     *     @OA\Response(response=200, description="Message sent successfully"),
+     *     @OA\Response(response=400, description="Bad request"),
+     *     @OA\Response(response=401, description="Unauthorized"),
+     * )
+     */
+    public function SendPushNotificationTouser(Request $request)
+    {
+
+        $borrower = Borrower::where("email", $request->user_email)->first();
+        if(!$borrower){
+            return $this->error('Borrower not found', 404);
+        }
+
+        if(!$borrower->fcm_token){
+            return $this->error('FCM token not found for borrower', 404);
+        }
+
+        $firebaseService = app()->make(\Modules\Notification\Services\FirebaseService::class);
+        $firebaseService->sendPush(
+            $borrower->fcm_token,
+            $request->title,
+            $request->message,
+            []
+        );
+
+        return $this->success([], 'Notification sent', 200);
     }
 
 

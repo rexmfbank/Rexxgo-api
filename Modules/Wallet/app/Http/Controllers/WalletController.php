@@ -1316,7 +1316,7 @@ class WalletController extends Controller
                     return response()->json(['error' => 'Conversion rate not found.'], 404);
                 }
 
-                $convertedAmount = $amount / $rate->rate;
+                $convertedAmount = $amount * $rate->rate;
 
                 if($convertedAmount < 1500){
                     return response()->json(['error' => $convertedAmount . ' ' . $destinationWallet->currency . ' cannot be transferred. Minimum is 1'.$destinationWallet->currency], 404);
