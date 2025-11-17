@@ -220,5 +220,8 @@ return [
                 ],
             ],
         ],
+        'REX-GO' => [
+            'credentials' => env('FIREBASE_CREDENTIALS'),
+        ],
     ],
 ];
