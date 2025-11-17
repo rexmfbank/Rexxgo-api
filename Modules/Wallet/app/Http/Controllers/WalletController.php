@@ -2513,7 +2513,7 @@ class WalletController extends Controller
             $destination = [
                 'payment_rail' => $treasuryWallet['destination_rail'] ?? "ethereum",
                 'bridge_wallet_id' => $treasuryWallet['destination_id'],
-                'currency' => $treasuryWallet['destination_currency'],
+                'currency' => "usdc",
             ];
 
             $source = [
