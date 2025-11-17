@@ -31,14 +31,13 @@ class WalletController extends Controller
     use ApiResponse;
     protected $bridgeService;
     protected $rexBank;
-    protected $firebaseService;
+
 
     // 2. Inject the service into the constructor
-    public function __construct(BridgeService $bridgeService, RexMfbService $rexBank, FirebaseService $firebaseService)
+    public function __construct(BridgeService $bridgeService, RexMfbService $rexBank)
     {
         $this->bridgeService = $bridgeService;
         $this->rexBank = $rexBank;
-        $this->firebaseService = $firebaseService;
     }
 
     /**
@@ -1712,7 +1711,13 @@ class WalletController extends Controller
             $notificationController->createNotification($notificationRequest);
 
             if(!empty($borrower->fcm_token)){
-                $this->firebaseService->sendPush($borrower->fcm_token, "Debit Alert", $notificationMessage);
+                $firebaseService = app()->make(\Modules\Notification\Services\FirebaseService::class);
+                $firebaseService->sendPush(
+                    $borrower->fcm_token,
+                    "Debit Alert",
+                    $notificationMessage,
+                    []
+                );
             }
             return response()->json([
                 "message" => "Transfer successful",
@@ -2007,7 +2012,13 @@ class WalletController extends Controller
             $notificationController->createNotification($notificationRequest);
 
             if(!empty($borrower->fcm_token)){
-                $this->firebaseService->sendPush($borrower->fcm_token, "Debit Alert", $notificationMessage);
+                $firebaseService = app()->make(\Modules\Notification\Services\FirebaseService::class);
+                $firebaseService->sendPush(
+                    $borrower->fcm_token,
+                    "Debit Alert",
+                    $notificationMessage,
+                    []
+                );
             }
 
             $res = new TransactionResource($newTransaction);
@@ -2163,7 +2174,13 @@ class WalletController extends Controller
             $notificationController->createNotification($notificationRequest);
 
             if(!empty($borrower->fcm_token)){
-                $this->firebaseService->sendPush($borrower->fcm_token, "Debit Alert", $notificationMessage);
+                $firebaseService = app()->make(\Modules\Notification\Services\FirebaseService::class);
+                $firebaseService->sendPush(
+                    $borrower->fcm_token,
+                    "Debit Alert",
+                    $notificationMessage,
+                    []
+                );
             }
 
             $res = new TransactionResource($newTransaction);
@@ -2319,7 +2336,13 @@ class WalletController extends Controller
             $notificationController->createNotification($notificationRequest);
 
             if(!empty($borrower->fcm_token)){
-                $this->firebaseService->sendPush($borrower->fcm_token, "Debit Alert", $notificationMessage);
+                $firebaseService = app()->make(\Modules\Notification\Services\FirebaseService::class);
+                $firebaseService->sendPush(
+                    $borrower->fcm_token,
+                    "Debit Alert",
+                    $notificationMessage,
+                    []
+                );
             }
 
             $res = new TransactionResource($newTransaction);
@@ -2523,8 +2546,8 @@ class WalletController extends Controller
             ];
 
             $reference = "REX-" . $wallet->currency . "-" . date("Ymdhsi") . '-' . $borrower->id . uniqid();
-
-            $data = $this->bridgeService->Transfer($borrower->bridge_customer_id, $reference, $source, $destination, $convertedAmount);
+            
+            $data = $this->bridgeService->Transfer($borrower->bridge_customer_id, $reference, $source, $destination, $amount);
 
             if (!isset($data['id'])) {
                 $errorMessage = $data['message'] ?? "Unsupported conversion";
@@ -2540,13 +2563,13 @@ class WalletController extends Controller
                 'reference' => $reference,
                 'borrower_id' => $borrower->id,
                 'savings_id' => $wallet->id,
-                'transaction_amount' => $convertedAmount,
+                'transaction_amount' => $amount,
                 'balance' => $wallet->available_balance,
                 'transaction_date' => now()->toDateString(),
                 'transaction_time' => now()->toTimeString(),
                 'transaction_type' => 'debit',
                 'transaction_description' => "Wallet transfer",
-                'debit' => $convertedAmount,
+                'debit' => $amount,
                 'credit' => 0,
                 'category' => 'fund_converted',
                 'status_id' => 'pending',
@@ -2555,7 +2578,7 @@ class WalletController extends Controller
                 'external_tx_id' => $transferId . '_init',
                 'provider' => 'bridge',
                 "treasury_transfer_details" => json_encode([
-                    'amount' => $data['amount'],
+                    'amount' => $convertedAmount,
                     'recipient_code' => $data['recipient_code'],
                     'transaction_pin' => $data['transaction_pin'],
                     'reason' => $data['reason'],

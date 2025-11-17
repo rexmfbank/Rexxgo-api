@@ -15,6 +15,7 @@ use \Modules\Auth\app\Models\PasswordResetToken;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Modules\Notification\Services\FirebaseService;
 use Modules\Wallet\app\Http\Controllers\WalletController;
 use Modules\Wallet\Services\BridgeService;
 use Modules\Wallet\Services\RexMfbService;
@@ -359,34 +360,34 @@ class AuthController extends Controller
         $borrower->facial_verification_id = $request->input('verification_id');
 
         //find the webkook payload in the webhook log table
-        $webhookLog = Webhook
-            ->where('source', 'qoreid')
-            ->first();
-        if (!$webhookLog) {
-            $borrower->kyc_status === 'kyc_pending';
-            $borrower->save();
-            return $this->error('Facial verification pending.', 404);
-        }
+        // $webhookLog = Webhook
+        //     ->where('source', 'qoreid')
+        //     ->first();
+        // if (!$webhookLog) {
+        //     $borrower->kyc_status === 'kyc_pending';
+        //     $borrower->save();
+        //     return $this->error('Facial verification pending.', 404);
+        // }
 
-        // If the webhook log exists, update the borrower status, check the similarity score
-        $webhookData = $webhookLog->payload;
+        // // If the webhook log exists, update the borrower status, check the similarity score
+        // $webhookData = $webhookLog->payload;
 
-        if ($webhookData['summary']['bvn_check']['status'] == 'EXACT_MATCH') {
-            $borrower->kyc_status = 'kyc_verified';
-            // $borrower->first_name = $webhookData['bvn']['firstname'] ?? 'Anonymous';
-            // $borrower->last_name = $webhookData['bvn']['lastname'] ?? 'Anonymous';
-            $borrower->middle_name = $webhookData['bvn']['middlename'] ?? $borrower->middle_name;
-            $borrower->gender = $webhookData['bvn']['gender'];
-            $borrower->dob = Carbon::createFromFormat('d-m-Y', $webhookData['bvn']['birthdate'])->toDateString() ?? null;
-            $borrower->photo = $webhookData['metadata']['imageUrl'] ?? null;
-        } else {
-            $borrower->kyc_status = 'kyc_failed';
-        }
+        // if ($webhookData['summary']['bvn_check']['status'] == 'EXACT_MATCH') {
+        //     $borrower->kyc_status = 'kyc_verified';
+        //     // $borrower->first_name = $webhookData['bvn']['firstname'] ?? 'Anonymous';
+        //     // $borrower->last_name = $webhookData['bvn']['lastname'] ?? 'Anonymous';
+        //     $borrower->middle_name = $webhookData['bvn']['middlename'] ?? $borrower->middle_name;
+        //     $borrower->gender = $webhookData['bvn']['gender'];
+        //     $borrower->dob = Carbon::createFromFormat('d-m-Y', $webhookData['bvn']['birthdate'])->toDateString() ?? null;
+        //     $borrower->photo = $webhookData['metadata']['imageUrl'] ?? null;
+        // } else {
+        //     $borrower->kyc_status = 'kyc_failed';
+        // }
         $borrower->save();
 
         if ($borrower->kyc_status === 'kyc_failed') {
             $data = [
-                'kyc_result' => $webhookData['summary']['bvn_check']['fieldMatches']
+                'kyc_result' => ""//$webhookData['summary']['bvn_check']['fieldMatches']
             ];
             return $this->success($data, 'KYC verification failed.', 409);
         }
