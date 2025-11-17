@@ -2388,8 +2388,10 @@ class WalletController extends Controller
         if (!$wallet || $wallet->account_number == "") {
             return $this->error('Invalid wallet selected', 400);
         }
-        if ($data['amount'] < 100) {
-            return $this->error("Amount should be minimum of NGN100", 400);
+        if($wallet->currency == SavingsProduct::$ngn){
+            if ($data['amount'] < 100) {
+                return $this->error("Amount should be minimum of NGN100", 400);
+            }
         }
         if (!Hash::check($data['transaction_pin'], $borrower->pin)) {
             return $this->error('Invalid transaction pin', 400);
