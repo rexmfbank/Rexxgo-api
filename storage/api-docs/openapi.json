@@ -456,6 +456,43 @@
                 }
             }
         },
+        "/api/auth/verify-2fa": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Verify 2FA code",
+                "operationId": "c21bcc57dc090ba72e6344b76a8e97d8",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "user_id": {
+                                        "type": "string",
+                                        "example": ""
+                                    },
+                                    "two_fa_code": {
+                                        "type": "string",
+                                        "example": "123456"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "2FA verified, login successful"
+                    },
+                    "400": {
+                        "description": "Invalid or expired 2FA code"
+                    }
+                }
+            }
+        },
         "/api/auth/logout": {
             "post": {
                 "tags": [
@@ -904,17 +941,17 @@
                                     },
                                     "show_account_balance": {
                                         "description": "Show or hide account balance",
-                                        "type": "boolean",
+                                        "type": "string",
                                         "example": true
                                     },
                                     "allow_notification": {
                                         "description": "Enable or disable all app notifications",
-                                        "type": "boolean",
+                                        "type": "string",
                                         "example": true
                                     },
                                     "updates_notification": {
                                         "description": "Receive updates/announcement notifications",
-                                        "type": "boolean",
+                                        "type": "string",
                                         "example": true
                                     },
                                     "balance_changes_notification": {
@@ -1008,6 +1045,66 @@
                                 }
                             }
                         }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/profile/enable-2fa": {
+            "post": {
+                "tags": [
+                    "Profile"
+                ],
+                "summary": "Enable 2FA for the user",
+                "operationId": "f1ab1fa2add290b6efc1f53b4109f19e",
+                "responses": {
+                    "200": {
+                        "description": "2FA code sent"
+                    },
+                    "400": {
+                        "description": "Error"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/profile/verify-enable-2fa": {
+            "post": {
+                "tags": [
+                    "Profile"
+                ],
+                "summary": "Verify 2FA OTP to enable 2FA",
+                "operationId": "fc652be84a268a6700f4f97f4811965e",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "otp": {
+                                        "type": "string",
+                                        "example": "123456"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "2FA enabled successfully"
+                    },
+                    "400": {
+                        "description": "Invalid or expired OTP"
                     }
                 },
                 "security": [

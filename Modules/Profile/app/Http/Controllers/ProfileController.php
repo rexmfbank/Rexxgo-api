@@ -5,6 +5,7 @@ namespace Modules\Profile\app\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\Borrower;
 use App\Traits\ApiResponse;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -214,6 +215,92 @@ class ProfileController extends Controller
 
         return $this->success("FCM token updated successfully");
     }
+
+    /**
+ * @OA\Post(
+ *   path="/api/profile/enable-2fa",
+ *   tags={"Profile"},
+ *   summary="Enable 2FA for the user",
+ *   security={{"bearerAuth":{}}},
+ *   @OA\Response(response=200, description="2FA code sent"),
+ *   @OA\Response(response=400, description="Error")
+ * )
+ */
+public function enableTwoFa(Request $request)
+{
+    $borrower = auth()->guard('borrower')->user();
+
+    if ($borrower->two_fa_enabled) {
+        return $this->error('2FA is already enabled', 400);
+    }
+
+    $twoFaCode = rand(100000, 999999);
+    $borrower->two_fa_code = $twoFaCode;
+    $borrower->two_fa_expires_at = now()->addMinutes(10); // code valid for 10 mins
+    $borrower->save();
+
+    // Send OTP via email
+     //define the email message for the otp
+    $msg = "Hello {$borrower->first_name},\n\n";
+    $msg .= "You are requesting to enable Two-Factor Authentication (2FA) on your account. ";
+    $msg .= "Please use the following OTP to complete the setup: **{$twoFaCode}**.\n\n";
+    $msg .= "This OTP will expire in 5 minutes for security purposes.\n\n";
+    $msg .= "If you did not request this, please ignore this email. No changes will be made to your account.\n\n";
+    $msg .= "Thank you for keeping your account secure,\n";
+    $msg .= env('APP_NAME') . " Team";
+
+    $view = view("emails.generic", ['msg' => $msg]);
+    $email = $borrower->email;
+    tribearcSendMail(env("APP_NAME") . " - Verify Your 2FA Setup", $view, $email);
+
+
+
+    return $this->success([
+        'message' => '2FA code sent to your email. Use it to verify and enable 2FA.'
+    ], '2FA code sent');
+}
+
+/**
+ * @OA\Post(
+ *   path="/api/profile/verify-enable-2fa",
+ *   tags={"Profile"},
+ *   summary="Verify 2FA OTP to enable 2FA",
+ *   security={{"bearerAuth":{}}},
+ *   @OA\RequestBody(
+ *     required=true,
+ *     @OA\JsonContent(
+ *       @OA\Property(property="otp", type="string", example="123456")
+ *     )
+ *   ),
+ *   @OA\Response(response=200, description="2FA enabled successfully"),
+ *   @OA\Response(response=400, description="Invalid or expired OTP")
+ * )
+ */
+public function verifyEnableTwoFa(Request $request)
+{
+    $request->validate([
+        'otp' => 'required|string|size:6'
+    ]);
+
+    $borrower = auth()->guard('borrower')->user();
+
+    if (!$borrower->two_fa_code || Carbon::create($borrower->two_fa_expires_at)->isPast()) {
+        return $this->error('OTP expired or invalid', 400);
+    }
+
+    if ($borrower->two_fa_code !== $request->otp) {
+        return $this->error('Invalid OTP', 400);
+    }
+
+    $borrower->two_fa_enabled = true;
+    $borrower->two_fa_code = null;
+    $borrower->two_fa_expires_at = null;
+    $borrower->save();
+
+    return $this->success([
+        'message' => 'Two-factor authentication enabled successfully'
+    ], '2FA enabled');
+}
 
 
     /**

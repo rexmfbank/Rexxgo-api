@@ -19,6 +19,9 @@ Route::middleware(['auth:borrower', 'throttle:10,1'])->group(function () {
         Route::post('/update', [ProfileController::class, 'update'])->name('profile.update');
         Route::post('/kyc', [ProfileController::class, 'startKyc'])->name('profile.update-us');
         Route::post('/fcm-token', [ProfileController::class, 'updateFcmToken'])->name('profile.updateFcmToken');
+        Route::post('/enable-2fa', [ProfileController::class, 'enableTwoFa'])->name('profile.enable2fa');
+        Route::post('/verify-enable-2fa', [ProfileController::class, 'verifyEnableTwoFa'])->name('profile.verifyEnableTwoFa');
+        
         
         Route::get('/login-activities', [ProfileController::class, 'getLoginActivities'])->name('profile.login-activities');
         Route::get('/kyc-status', [ProfileController::class, 'getKycStatus'])->name('profile.kyc-status');

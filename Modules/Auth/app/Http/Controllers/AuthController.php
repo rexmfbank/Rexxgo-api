@@ -50,7 +50,7 @@ class AuthController extends Controller
                 return $this->error('Company not found', 404);
             }
 
-            $company['walkthrough'] = config('walkthrough',[]);
+            $company['walkthrough'] = config('walkthrough', []);
 
             return $this->success($company, 'Company details retrieved successfully');
         } catch (\Exception $e) {
@@ -128,8 +128,9 @@ class AuthController extends Controller
             ->where(function ($q) use ($request) {
                 $q->where('phone', $request->input('phone'))
                     ->orWhere('email', $request->input('email'));
-            })->exists()) {
-            return $this->error('Phone or Email already exists', 409);       
+            })->exists()
+        ) {
+            return $this->error('Phone or Email already exists', 409);
         }
 
 
@@ -184,21 +185,19 @@ class AuthController extends Controller
                 'kyc_status'        => 'kyc_pending', // pending until kyc is done
                 'status'        => 'active', // pending until passcode is set
             ]);
-            
+
             // Create savings accounts for NGN, USD, USDC
             $bridgeService = new BridgeService();
             $rexBank = new RexMfbService();
 
             $walletController = new WalletController($bridgeService, $rexBank);
             $savingsResult = $walletController->createUserWallets($borrower->id);
-            
+
             // Log the result
             if ($savingsResult['success']) {
-                
             } else {
-                
             }
-            
+
             $data = [
                 'borrower_id'   => Crypt::encryptString($borrower->id),
                 'phone'         => $borrower->phone,
@@ -295,7 +294,7 @@ class AuthController extends Controller
             'email' => 'required|string|max:50',
             'otp'   => 'required|digits:6',
         ]);
-       
+
         $record = PasswordResetToken::where('email', $request->email)
             ->where('token', $request->otp)
             ->where('updated_at', '>', now())
@@ -388,7 +387,7 @@ class AuthController extends Controller
 
         if ($borrower->kyc_status === 'kyc_failed') {
             $data = [
-                'kyc_result' => ""//$webhookData['summary']['bvn_check']['fieldMatches']
+                'kyc_result' => "" //$webhookData['summary']['bvn_check']['fieldMatches']
             ];
             return $this->success($data, 'KYC verification failed.', 409);
         }
@@ -460,7 +459,7 @@ class AuthController extends Controller
         //data should be access token and borrower details
         //login the borrower
         $token = auth('borrower')->login($borrower);
-         DB::table('borrowers')->where('id', $borrower->id)->update(['passcode_created' => true]);
+        DB::table('borrowers')->where('id', $borrower->id)->update(['passcode_created' => true]);
         $data = [
             'borrower_id' => Crypt::encryptString($borrower->id),
             'phone'       => $borrower->phone,
@@ -634,10 +633,34 @@ class AuthController extends Controller
         if (! $token = Auth::guard('borrower')->attempt($credentials)) {
             return $this->error('Invalid email or password', 401);
         }
-        
-        $borrower = Auth::guard('borrower')->user();
 
-         LoginActivity::create([
+        $borrower = Auth::guard('borrower')->user();
+        if ($borrower->two_fa_enabled) {
+            $twoFaCode = rand(100000, 999999); // 6-digit code
+            $borrower->two_fa_code = $twoFaCode;
+            $borrower->two_fa_expires_at = now()->addMinutes(5); // 5 min expiry
+            $borrower->save();
+
+            $msg = "Hello {$borrower->first_name},\n\n";
+            $msg .= "A login attempt to your account requires Two-Factor Authentication (2FA). ";
+            $msg .= "Please use the following OTP to complete your login: **{$twoFaCode}**.\n\n";
+            $msg .= "This OTP will expire in 5 minutes for security purposes.\n\n";
+            $msg .= "If you did not attempt to login, please ignore this email.\n\n";
+            $msg .= "Thank you for securing your account,\n";
+            $msg .= env('APP_NAME') . " Team";
+
+            // Send the OTP email
+            $view = view("emails.generic", ['msg' => $msg]);
+            $email = $borrower->email;
+            tribearcSendMail(env("APP_NAME") . " - Your Login 2FA OTP", $view, $email);
+
+            return $this->success([
+                'user_id' => base64_encode($borrower->id),
+                'message' => '2FA code sent. Please verify to complete login.'
+            ], '2FA required', 200);
+        }
+
+        LoginActivity::create([
             'borrower_id' => $borrower->id,
             'email'       => $request->email,
             'ip_address'  => $request->ip(),
@@ -647,6 +670,59 @@ class AuthController extends Controller
 
         return $this->respondWithToken($token, 'Login successful');
     }
+
+
+    /**
+     * @OA\Post(
+     *   path="/api/auth/verify-2fa",
+     *   tags={"Auth"},
+     *   summary="Verify 2FA code",
+     *   @OA\RequestBody(
+     *     required=true,
+     *     @OA\JsonContent(
+     *       @OA\Property(property="user_id", type="string", example=""),
+     *       @OA\Property(property="two_fa_code", type="string", example="123456")
+     *     )
+     *   ),
+     *   @OA\Response(response=200, description="2FA verified, login successful"),
+     *   @OA\Response(response=400, description="Invalid or expired 2FA code")
+     * )
+     */
+    public function verifyTwoFa(Request $request)
+    {
+        $request->validate([
+            'user_id' => 'required|string',
+            'two_fa_code' => 'required|string|size:6',
+        ]);
+
+        $borrower = Borrower::where("id", base64_decode($request->user_id))->first();
+        if (!$borrower) {
+            return $this->error('Invalid user', 400);
+        }
+
+        if (!$borrower->two_fa_enabled || !$borrower->two_fa_code) {
+            return $this->error('2FA not enabled for this user', 400);
+        }
+
+        if (Carbon::create($borrower->two_fa_expires_at)->isPast()) {
+            return $this->error('2FA code expired', 400);
+        }
+
+        if ($borrower->two_fa_code !== $request->two_fa_code) {
+            return $this->error('Invalid 2FA code', 400);
+        }
+
+        // Clear 2FA fields
+        $borrower->two_fa_code = null;
+        $borrower->two_fa_expires_at = null;
+        $borrower->save();
+
+        // Generate JWT token
+        $token = Auth::guard('borrower')->login($borrower);
+
+        return $this->respondWithToken($token, 'Login successful');
+    }
+
 
     /**
      * @OA\Post(
@@ -694,7 +770,7 @@ class AuthController extends Controller
             'access_token' => $token,
             'token_type'   => 'bearer',
             'expires_in'   => config('jwt.ttl') * 60, // seconds
-            'user'=> Auth::guard('borrower')->user()
+            'user' => Auth::guard('borrower')->user()
         ];
 
         return $this->success($data, $message);
@@ -774,7 +850,7 @@ class AuthController extends Controller
         $record = Borrower::where('email', $request->email)->first();
 
         //check otp expired
-        if($record && $record->otp_expires_at && Carbon::now()->greaterThan($record->otp_expires_at)) {
+        if ($record && $record->otp_expires_at && Carbon::now()->greaterThan($record->otp_expires_at)) {
             return $this->error('OTP has expired. Please request a new one.', 400);
         }
 
@@ -870,7 +946,7 @@ class AuthController extends Controller
         $record = Borrower::where('email', $request->email)->first();
 
         //check otp expired
-        if($record && $record->otp_expires_at && Carbon::now()->greaterThan($record->otp_expires_at)) {
+        if ($record && $record->otp_expires_at && Carbon::now()->greaterThan($record->otp_expires_at)) {
             return $this->error('OTP has expired. Please request a new one.', 400);
         }
 
@@ -914,5 +990,4 @@ class AuthController extends Controller
             'message' => $message,
         ], $code);
     }
-
 }
