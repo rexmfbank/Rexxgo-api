@@ -865,23 +865,62 @@
                 "tags": [
                     "Profile"
                 ],
-                "summary": "Update user profile",
+                "summary": "Update user profile details",
                 "operationId": "b5c5218fa17432b2ede7e90c1cd1d92c",
                 "requestBody": {
                     "required": true,
                     "content": {
-                        "application/json": {
+                        "multipart/form-data": {
                             "schema": {
                                 "properties": {
-                                    "bvn": {
-                                        "description": "For Nigeria users only",
+                                    "first_name": {
                                         "type": "string",
-                                        "example": "12345678901"
+                                        "example": "John"
                                     },
-                                    "nin": {
-                                        "description": "For Nigeria users only",
+                                    "last_name": {
                                         "type": "string",
-                                        "example": "12345678901"
+                                        "example": "Doe"
+                                    },
+                                    "middle_name": {
+                                        "type": "string",
+                                        "example": "Michael"
+                                    },
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "+2348012345678"
+                                    },
+                                    "avatar": {
+                                        "type": "string",
+                                        "format": "binary"
+                                    },
+                                    "gender": {
+                                        "description": "Gender must be 'male' or 'female'",
+                                        "type": "string",
+                                        "enum": [
+                                            "male",
+                                            "female"
+                                        ],
+                                        "example": "male"
+                                    },
+                                    "show_account_balance": {
+                                        "description": "Show or hide account balance",
+                                        "type": "boolean",
+                                        "example": true
+                                    },
+                                    "allow_notification": {
+                                        "description": "Enable or disable all app notifications",
+                                        "type": "boolean",
+                                        "example": true
+                                    },
+                                    "updates_notification": {
+                                        "description": "Receive updates/announcement notifications",
+                                        "type": "boolean",
+                                        "example": true
+                                    },
+                                    "balance_changes_notification": {
+                                        "description": "Receive notifications for account balance changes",
+                                        "type": "boolean",
+                                        "example": true
                                     }
                                 },
                                 "type": "object"
@@ -969,6 +1008,50 @@
                                 }
                             }
                         }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/profile/login-activities": {
+            "get": {
+                "tags": [
+                    "Profile"
+                ],
+                "summary": "Get login activities of authenticated user",
+                "operationId": "7ce35a55820204064b332154b25a4323",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Page number",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    },
+                    {
+                        "name": "pageSize",
+                        "in": "query",
+                        "description": "Number of items per page",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
                     }
                 },
                 "security": [

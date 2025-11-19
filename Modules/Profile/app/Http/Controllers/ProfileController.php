@@ -11,8 +11,9 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Modules\Profile\app\Http\Resources\LoginActivityResource;
 use Modules\Profile\app\Http\Resources\UserResource;
-use Modules\Wallet\Services\BridgeService; 
+use Modules\Wallet\Services\BridgeService;
 
 
 class ProfileController extends Controller
@@ -47,20 +48,58 @@ class ProfileController extends Controller
 
         return $this->success(new UserResource($borrower), 'Profile retrieved successfully');
     }
-
     /**
      * @OA\Post(
      *   path="/api/profile/update",
      *   tags={"Profile"},
-     *   summary="Update user profile",
+     *   summary="Update user profile details",
      *   security={{"bearerAuth":{}}},
+     *
      *   @OA\RequestBody(
      *     required=true,
-     *     @OA\JsonContent(
-     *       @OA\Property(property="bvn", type="string", example="12345678901", description="For Nigeria users only"),
-     *       @OA\Property(property="nin", type="string", example="12345678901", description="For Nigeria users only")
+     *     @OA\MediaType(
+     *       mediaType="multipart/form-data",
+     *       @OA\Schema(
+     *         @OA\Property(property="first_name", type="string", example="John"),
+     *         @OA\Property(property="last_name", type="string", example="Doe"),
+     *         @OA\Property(property="middle_name", type="string", example="Michael"),
+     *         @OA\Property(property="phone", type="string", example="+2348012345678"),
+     *         @OA\Property(property="avatar", type="string", format="binary"),
+     *        @OA\Property(
+     *             property="gender",
+     *             type="string",
+     *             enum={"male", "female"},
+     *             example="male",
+     *             description="Gender must be 'male' or 'female'"
+     *         ),
+     *         @OA\Property(
+     *             property="show_account_balance",
+     *             type="string",
+     *             example=true,
+     *             description="Show or hide account balance"
+     *         ),
+     *         @OA\Property(
+     *             property="allow_notification",
+     *             type="string",
+     *             example=true,
+     *             description="Enable or disable all app notifications"
+     *         ),
+     *         @OA\Property(
+     *             property="updates_notification",
+     *             type="string",
+     *             example=true,
+     *             description="Receive updates/announcement notifications"
+     *         ),
+     *         @OA\Property(
+     *             property="balance_changes_notification",
+     *             type="boolean",
+     *             example=true,
+     *             description="Receive notifications for account balance changes"
+     *         )
+     *       )
      *     )
      *   ),
+     *
      *   @OA\Response(response=200, description="Profile updated successfully"),
      *   @OA\Response(response=400, description="Validation error"),
      *   @OA\Response(response=401, description="Unauthorized")
@@ -68,72 +107,60 @@ class ProfileController extends Controller
      */
     public function update(Request $request)
     {
-        $validatedData = $request->validate([
-            'bvn' => 'required_without:nin|string|size:11|regex:/^\d{11}$/',
-            'nin' => 'required_without:bvn|string|size:11|regex:/^\d{11}$/',
+        $validated = $request->validate([
+            'first_name'   => 'nullable|string|max:100',
+            'last_name'    => 'nullable|string|max:100',
+            'middle_name'  => 'nullable|string|max:100',
+            'phone'        => 'nullable|string|max:20',
+            'avatar'       => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+            'gender' => 'nullable|in:male,female',
+            'show_account_balance' => 'nullable',
+            'allow_notification' => 'nullable',
+            'updates_notification' => 'nullable',
+            'balance_changes_notification' => 'nullable',
         ]);
 
-        $borrower = auth()->guard('borrower')->user();
-        // Validate based on country
-        $country = $borrower->country;
-        if ($borrower->country === 'USA') {
-            return $this->error('Something went wrong', 500);
-        } 
-
+        $user = auth()->guard('borrower')->user();
 
         try {
-            if (isset($validatedData['bvn'])) {
-                if($borrower->bvn != ""){
-                    return $this->error('BVN already exist!', 500);
-                }
-                $accessToken = $this->getQoreIdToken();
-                if($accessToken == null) {
-                    return $this->error('Unable to verify your identity. API error.', 500);
-                }
-                $verifyBvnBasic = $this->verifyBvnBasic($validatedData['bvn'], $borrower->first_name, $borrower->last_name, $accessToken);
-                
-                if($verifyBvnBasic == null){
-                    return $this->error('Invalid BVN supplied');
-                }
-                if($verifyBvnBasic['status']['status'] == "verified"){
-                    $bvn = $verifyBvnBasic['bvn'];
-                    $inputFormat = 'd-m-Y';
-                    $outputFormat = 'Y-m-d';
+            $updateData = [];
 
-                    $dateObject = \DateTime::createFromFormat($inputFormat, $bvn['birthdate']);
-                    $formattedDate = $dateObject->format($outputFormat);
-                        
-                    $updateData = [
-                        "first_name" => $bvn['firstname'],
-                        "last_name"=> $bvn['lastname'],
-                        "middle_name"=> $bvn['middlename'],
-                        "dob"=> $formattedDate,
-                        "gender"=> $bvn['gender'],
-                        "id_type" => "bvn",
-                        "id_value" => $validatedData['bvn'], 
-                        "bvn" => $validatedData['bvn'], 
-                        "kyc_status" => "active", 
-                    ];
-                    DB::table('borrowers')->where('id', $borrower->id)->update($updateData);
-                    return $this->success(new UserResource($borrower), 'Profile update successfully');
-                }
-                
-                
-            } elseif (isset($validatedData['nin'])) {
-                $updateData['id_type'] = 'NIN';
-                $updateData['id_value'] = $validatedData['nin'];
-                $borrower = Borrower::find($borrower->id);
-
-                return $this->success(new UserResource($borrower), 'Profile updated successfully');
-            }else {
-                return $this->error('Unable to verify your identity', 500);
+            if ($request->filled('first_name'))   $updateData['first_name'] = $validated['first_name'];
+            if ($request->filled('last_name'))    $updateData['last_name'] = $validated['last_name'];
+            if ($request->filled('middle_name'))  $updateData['middle_name'] = $validated['middle_name'];
+            if ($request->filled('phone'))        $updateData['phone'] = $validated['phone'];
+            if ($request->filled('gender'))       $updateData['gender'] = $validated['gender'];
+            if ($request->filled('show_account_balance')) {
+                $updateData['show_account_balance'] = $request->boolean('show_account_balance');
+            }
+            if ($request->filled('allow_notification')) {
+                $updateData['allow_notification'] = $request->boolean('allow_notification');
+            }
+            if ($request->filled('updates_notification')) {
+                $updateData['updates_notification'] = $request->boolean('updates_notification');
+            }
+            if ($request->filled('balance_changes_notification')) {
+                $updateData['balance_changes_notification'] = $request->boolean('balance_changes_notification');
             }
 
+
+            if ($request->hasFile('avatar')) {
+                $avatarPath = $request->file('avatar')->store('avatars', 'public');
+                $updateData['photo'] = $avatarPath;
+            }
+
+            DB::table('borrowers')->where('id', $user->id)->update($updateData);
+
+            // Refresh user
+            $user->refresh();
+
+            return $this->success(new UserResource($user), 'Profile updated successfully');
         } catch (\Exception $e) {
-            
             return $this->error('Failed to update profile: ' . $e->getMessage(), 500);
         }
     }
+
+
 
 
     /**
@@ -180,13 +207,63 @@ class ProfileController extends Controller
         $borrower = auth()->guard('borrower')->user();
 
         $updateData = [
-            "fcm_token" => $request->fcm_token, 
+            "fcm_token" => $request->fcm_token,
         ];
         DB::table('borrowers')->where('id', $borrower->id)->update($updateData);
-                    
+
 
         return $this->success("FCM token updated successfully");
     }
+
+
+    /**
+ * @OA\Get(
+ *   path="/api/profile/login-activities",
+ *   tags={"Profile"},
+ *   summary="Get login activities of authenticated user",
+ *   security={{"bearerAuth":{}}},
+ *   @OA\Parameter(
+ *      name="page",
+ *      in="query",
+ *      description="Page number",
+ *      required=false,
+ *      @OA\Schema(type="integer", default=1)
+ *   ),
+ *   @OA\Parameter(
+ *      name="pageSize",
+ *      in="query",
+ *      description="Number of items per page",
+ *      required=false,
+ *      @OA\Schema(type="integer", default=15)
+ *   ),
+ *   @OA\Response(response=200, description="Success"),
+ *   @OA\Response(response=401, description="Unauthorized")
+ * )
+ */
+public function getLoginActivities(Request $request)
+{
+    $borrower = auth()->guard('borrower')->user();
+    $perPage = $request->query('pageSize', 15);
+
+    $activities = \App\Models\LoginActivity::where('borrower_id', $borrower->id)
+        ->orderBy('created_at', 'desc')
+        ->paginate($perPage);
+
+    $resourceCollection = LoginActivityResource::collection($activities);
+
+    $meta = [
+        'current_page' => $activities->currentPage(),
+        'total_pages'  => $activities->lastPage(),
+        'total_items'  => $activities->total(),
+        'per_page'     => $activities->perPage(),
+    ];
+
+    return $this->success([
+        'items' => $resourceCollection,
+        'meta'  => $meta,
+    ], 'Login activities retrieved successfully', 200);
+}
+
 
     /**
      * @OA\Post(
@@ -222,10 +299,10 @@ class ProfileController extends Controller
             // $updateData['zipcode'] = $validatedData['zipcode'];
             // DB::table('borrowers')->where('id', $borrower->id)->update($updateData);
             $borrower = Borrower::find($borrower->id);
-            
-            if($borrower->kyc_status != "active"){
 
-                if($borrower->bridge_customer_id !== "" && $borrower->kyc_link != ""){
+            if ($borrower->kyc_status != "active") {
+
+                if ($borrower->bridge_customer_id !== "" && $borrower->kyc_link != "") {
                     return $this->success([
                         "kyc_link" => $borrower->kyc_link,
                         "kyc_status" => $borrower->kyc_status,
@@ -239,11 +316,11 @@ class ProfileController extends Controller
                     'email' => $borrower->email,
                     'type' => 'individual',
                 ];
-        
+
                 $response = $this->bridgeService->createKycLink($kycData);
 
                 if (!$response) {
-                return $this->error('KYC service is currently unavailable', 500);
+                    return $this->error('KYC service is currently unavailable', 500);
                 }
 
                 $customerId = $response['customer_id'];
@@ -273,21 +350,20 @@ class ProfileController extends Controller
             }
 
             return $this->success([
-                        "kyc_link" => $borrower->kyc_link,
-                        "kyc_status" => $borrower->kyc_status,
-                        "tos_link" => $borrower->tos_link,
-                        'tos_status' => $borrower->tos_status,
-                        'rejection_reasons' => empty($borrower->rejection_reasons) ? [] : json_decode($borrower->rejection_reasons),
-                    ], 'Profile updated successfully');
-
+                "kyc_link" => $borrower->kyc_link,
+                "kyc_status" => $borrower->kyc_status,
+                "tos_link" => $borrower->tos_link,
+                'tos_status' => $borrower->tos_status,
+                'rejection_reasons' => empty($borrower->rejection_reasons) ? [] : json_decode($borrower->rejection_reasons),
+            ], 'Profile updated successfully');
         } catch (\Exception $e) {
-            
+
             return $this->error('Failed to update profile: ' . $e->getMessage(), 500);
         }
     }
 
 
-/**
+    /**
      * Sends a POST request to QoreID to verify BVN and name.
      *
      * @param string $bvn The BVN.
@@ -313,14 +389,13 @@ class ProfileController extends Controller
         try {
             $response = Http::withToken($accessToken)
                 ->withHeaders(['accept' => 'application/json'])
-                ->asJson() 
+                ->asJson()
                 ->post($url, $payload);
-            
+
             if ($response->successful()) {
-                return $response->json(); 
+                return $response->json();
             }
             return null;
-
         } catch (\Exception $e) {
 
             return null;
@@ -336,7 +411,7 @@ class ProfileController extends Controller
     {
         $clientId = env('QOREID_CLIENT_ID');
         $secret = env('QOREID_SECRET');
-        $tokenUrl = env('QOREID_BASEURL').'/token';
+        $tokenUrl = env('QOREID_BASEURL') . '/token';
 
         if (!$clientId || !$secret || !$tokenUrl) {
             return null; // Configuration missing
@@ -349,11 +424,10 @@ class ProfileController extends Controller
                 ->post($tokenUrl, $payload);
             info($response);
             if ($response->successful()) {
-                $tokenData = $response->json(); 
+                $tokenData = $response->json();
                 return $tokenData['accessToken'] ?? null;
             }
             return null;
-
         } catch (\Exception $e) {
             throw $e;
         }
@@ -376,7 +450,7 @@ class ProfileController extends Controller
         }
 
         $borrower = auth()->guard('borrower')->user();
-        
+
         return $this->success([
             'kyc_status' => $borrower->kyc_status,
             'id_type' => $borrower->id_type,
@@ -473,7 +547,7 @@ class ProfileController extends Controller
         return $this->success('Pin changed successfully');
     }
 
-        /**
+    /**
      * @OA\Post(
      *   path="/api/profile/pin/verify",
      *   tags={"Profile"},
@@ -512,8 +586,16 @@ class ProfileController extends Controller
     private function calculateProfileCompletion(Borrower $borrower): int
     {
         $requiredFields = [
-            'first_name', 'last_name', 'email', 'phone', 'dob', 
-            'address', 'city', 'state', 'zipcode', 'id_value'
+            'first_name',
+            'last_name',
+            'email',
+            'phone',
+            'dob',
+            'address',
+            'city',
+            'state',
+            'zipcode',
+            'id_value'
         ];
 
         $completedFields = 0;

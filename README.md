@@ -76,4 +76,8 @@ php artisan mgiration --path=database/migrations/2025_10_27_084538_create_liquid
 php artisan migrate --path=database/migrations/2025_11_04_092249_add_savings_id_to_treasuries_table.php
 php artisan migrate --path=database/migrations/2025_11_08_041903_add_f_c_m_token.php
 php artisan migrate --path=database/migrations/2025_11_10_090458_add_treasury_ngn_transaction.php
+php artisan migrate --path=database/migrations/2025_11_19_150336_add_profile_settings_to_borrowers_table.php
+php artisan migrate --path=database/migrations/2025_11_19_150833_create_login_activities_table.php
+
+
 RCP_513uain9bva28q6

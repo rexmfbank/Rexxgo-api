@@ -152,7 +152,7 @@ class NotificationController extends Controller
      */
     public function SendPushNotificationTouser(Request $request)
     {
-
+        
         $borrower = Borrower::where("email", $request->user_email)->first();
         if(!$borrower){
             return $this->error('Borrower not found', 404);
@@ -163,14 +163,14 @@ class NotificationController extends Controller
         }
 
         $firebaseService = app()->make(\Modules\Notification\Services\FirebaseService::class);
-        $firebaseService->sendPush(
+        $send = $firebaseService->sendPush(
             $borrower->fcm_token,
             $request->title,
             $request->message,
             []
         );
 
-        return $this->success([], 'Notification sent', 200);
+        return $this->success($send, 'Notification sent', 200);
     }
 
 

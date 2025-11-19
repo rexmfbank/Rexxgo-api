@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Crypt;
 use \App\Models\Company;
 use \App\Models\Borrower;
+use App\Models\LoginActivity;
 use App\Models\WebhookLog;
 use \Modules\Auth\app\Models\PasswordResetToken;
 use Carbon\Carbon;
@@ -633,6 +634,16 @@ class AuthController extends Controller
         if (! $token = Auth::guard('borrower')->attempt($credentials)) {
             return $this->error('Invalid email or password', 401);
         }
+        
+        $borrower = Auth::guard('borrower')->user();
+
+         LoginActivity::create([
+            'borrower_id' => $borrower->id,
+            'email'       => $request->email,
+            'ip_address'  => $request->ip(),
+            'device'      => $request->userAgent()
+        ]);
+
 
         return $this->respondWithToken($token, 'Login successful');
     }

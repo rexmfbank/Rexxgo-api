@@ -219,9 +219,6 @@ return [
                     // [MyMiddleware::class, 'static_method'],
                 ],
             ],
-        ],
-        'REX-GO' => [
-            'credentials' => env('FIREBASE_CREDENTIALS'),
-        ],
+        ]
     ],
 ];
