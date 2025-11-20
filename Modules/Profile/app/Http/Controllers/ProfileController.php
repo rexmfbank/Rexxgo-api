@@ -4,6 +4,8 @@ namespace Modules\Profile\app\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\Borrower;
+use App\Models\Savings;
+use App\Models\SavingsProduct;
 use App\Traits\ApiResponse;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -697,6 +699,15 @@ public function getLoginActivities(Request $request)
             $completedFields++;
         }
         
-        return round(($completedFields / count($requiredFields)) * 100);
+        $usdWallet = Savings::where('borrower_id', $borrower->id)->where('currency', SavingsProduct::$usd)->first(); //if usd wallet is created, that means wallets has bee n created
+
+        $profileCompletion = round(($completedFields / count($requiredFields)) * 100);
+
+        if($usdWallet){
+            if(!empty($usdWallet->account_number)){
+                $profileCompletion += 25;
+            }
+        }
+        return $profileCompletion > 100 ? 100 : $profileCompletion;
     }
 }
