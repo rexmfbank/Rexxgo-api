@@ -343,10 +343,15 @@ class WalletController extends Controller
                 DB::table('borrowers')->where('id', $borrower->id)->update(['wallet_created' => true]);
             }
             $status = $isCreateWallet ? 200 : 400;
-            return response()->json([
-                'message' => $status == 200 ? 'Wallets Created.' : $errorMessage,
-                'errorMessage' => $errorMessage
-            ], $status);
+            if($isCreateWallet){
+                return $this->success('Wallets Created.');
+            }else {
+                return $this->error($errorMessage);
+            }
+            // return response()->json([
+            //     'message' => $status == 200 ? 'Wallets Created.' : $errorMessage,
+            //     'errorMessage' => $errorMessage
+            // ], $status);
         } catch (\Throwable $th) {
             throw $th;
 
