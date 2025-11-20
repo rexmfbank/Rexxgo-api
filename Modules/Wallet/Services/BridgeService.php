@@ -382,7 +382,31 @@ class BridgeService
         ])->post($url, $payload);
 
         $body = $response->json();
-            Log::info($body);
+        Log::info($body);
+        if ($response->failed()) {
+            throw new \RuntimeException($body['message'] ?? "Bridge service error");
+        }
+
+        return $body;
+    }
+
+
+    public function getCustomer(string $customerId)
+    {
+        $baseUrl = rtrim(env('BRIDGE_BASE_URL', 'https://api.bridge.xyz/'), '/');
+        $apiKey = env('BRIDGE_API_KEY');
+
+        $url = "{$baseUrl}/v0/customers/{$customerId}";
+
+        Log::info("Bridge Get Customer Request URL: {$url}");
+
+        $response = Http::withHeaders([
+            'Api-Key' => $apiKey
+        ])->get($url);
+
+        $body = $response->json();
+        Log::info("Bridge Get Customer Response:", $body ?? []);
+
         if ($response->failed()) {
             throw new \RuntimeException($body['message'] ?? "Bridge service error");
         }

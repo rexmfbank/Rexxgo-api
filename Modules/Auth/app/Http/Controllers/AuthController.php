@@ -635,6 +635,29 @@ class AuthController extends Controller
         }
 
         $borrower = Auth::guard('borrower')->user();
+
+        //check for kyc status
+        if (!empty($borrower->bridge_customer_id) && $borrower->kyc_status != 'active') {
+            $bridgeService = new BridgeService();
+            // $bridgeUser = $bridgeService->getCustomer("97ea8018-669e-418e-a24c-d7fa4393095c");
+            $bridgeUser = $bridgeService->getCustomer($borrower->bridge_customer_id);
+            $kycStatus = $bridgeUser['status'] ?? 'not_started';
+            if ($kycStatus == "approved" || $kycStatus == "active") {
+                $borrower->kyc_status = "active";
+            } elseif ($kycStatus == "not_started") {
+            } elseif ($kycStatus == "under_review") {
+                $borrower->kyc_status = "awaiting_approval";
+            } elseif ($kycStatus == "rejected") {
+                $borrower->kyc_status = "rejected";
+            } else {
+                $borrower->kyc_status = $kycStatus;
+            }
+            $borrower->rejection_reasons = json_encode($bridgeUser['rejection_reasons'], JSON_PRETTY_PRINT);
+            $borrower->tos_status = $bridgeUser['has_accepted_terms_of_service'] ?? $borrower->tos_status;
+            $borrower->save();
+        }
+
+
         if ($borrower->two_fa_enabled) {
             $twoFaCode = rand(100000, 999999); // 6-digit code
             $borrower->two_fa_code = $twoFaCode;
