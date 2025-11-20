@@ -235,7 +235,7 @@ class WalletController extends Controller
             if (!$borrower) {
                 return $this->error('Customer not found!', 400);
             }
-
+            $this->createUserWallets($borrower->id);
             $savingsProduct = DB::table('savings_products')->where("product_name", SavingsProduct::$ngn)->first();
             $isCreateWallet = true;
             //check if customer already has a savings account
