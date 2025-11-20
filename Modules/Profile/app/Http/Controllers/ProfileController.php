@@ -679,10 +679,6 @@ public function getLoginActivities(Request $request)
             'phone',
             'dob',
             'address',
-            'city',
-            'state',
-            'zipcode',
-            'id_value'
         ];
 
         $completedFields = 0;
@@ -691,7 +687,15 @@ public function getLoginActivities(Request $request)
                 $completedFields++;
             }
         }
+        $requiredFields = [...$requiredFields, 'tos_status'];
+        $requiredFields = [...$requiredFields, 'kyc_status'];
 
+        if($borrower->tos_status === 'approved'){
+            $completedFields++;
+        }
+        if($borrower->kyc_status === 'active'){
+            $completedFields++;
+        }
         return round(($completedFields / count($requiredFields)) * 100);
     }
 }
