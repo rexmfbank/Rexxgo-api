@@ -1480,7 +1480,12 @@ class WalletController extends Controller
 
     public function transfertoUsBank(ExternalAccountRequest $request)
     {
-        $data = $request->validated();
+        try {
+            $data = $request->validated();
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $errors = $e->validator->errors()->all();
+            return $this->error($errors[0]);
+        }
 
         if (!auth()->guard('borrower')->check()) {
             return $this->error('Invalid access token, Please Login', 401);
