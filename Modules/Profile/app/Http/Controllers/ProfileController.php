@@ -696,6 +696,7 @@ public function getLoginActivities(Request $request)
         if($borrower->kyc_status === 'active'){
             $completedFields++;
         }
+        
         return round(($completedFields / count($requiredFields)) * 100);
     }
 }

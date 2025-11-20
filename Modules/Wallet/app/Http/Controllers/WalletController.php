@@ -348,7 +348,8 @@ class WalletController extends Controller
                 'errorMessage' => $errorMessage
             ], $status);
         } catch (\Throwable $th) {
-            //throw $th;
+            throw $th;
+
             return response()->json([
                 'message' => $th->getMessage(),
                 'status' => false
