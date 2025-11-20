@@ -19,6 +19,8 @@ Route::prefix('auth')
         Route::post('setpasscode', [AuthController::class, 'setPasscode']);
         Route::post('setpin', [AuthController::class, 'setPin']);
         Route::post('login', [AuthController::class, 'login']);
+        Route::post('check-email', [AuthController::class, 'checkEmail']);
+        
         Route::post('verify-2fa', [AuthController::class, 'verifyTwoFa']);
         
         Route::get('login', [AuthController::class, 'loginView'])->name('login');

@@ -456,6 +456,39 @@
                 }
             }
         },
+        "/api/auth/check-email": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Check if an email already exists",
+                "operationId": "2d168fa230e12db877b1b7d3c05979ef",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "email"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "example": "john@example.com"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Email check response"
+                    }
+                }
+            }
+        },
         "/api/auth/verify-2fa": {
             "post": {
                 "tags": [

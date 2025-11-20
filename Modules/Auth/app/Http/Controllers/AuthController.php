@@ -673,6 +673,41 @@ class AuthController extends Controller
 
 
     /**
+ * @OA\Post(
+ *   path="/api/auth/check-email",
+ *   tags={"Auth"},
+ *   summary="Check if an email already exists",
+ *   @OA\RequestBody(
+ *     required=true,
+ *     @OA\JsonContent(
+ *       required={"email"},
+ *       @OA\Property(property="email", type="string", example="john@example.com")
+ *     )
+ *   ),
+ *   @OA\Response(response=200, description="Email check response"),
+ * )
+ */
+public function checkEmail(Request $request)
+{
+    $request->validate([
+        'email' => 'required|email|max:50'
+    ]);
+
+    $exists = Borrower::where('email', $request->email)->first();
+
+    if ($exists) {
+        return $this->error('Email already exists', 409);
+    }
+
+    return $this->success([
+        "available" => true,
+        "message"   => "Email is available"
+    ]);
+}
+
+
+
+    /**
      * @OA\Post(
      *   path="/api/auth/verify-2fa",
      *   tags={"Auth"},
