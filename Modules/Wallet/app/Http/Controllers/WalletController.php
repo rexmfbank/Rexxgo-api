@@ -245,11 +245,12 @@ class WalletController extends Controller
                 $errorMessage .= "NGN Wallet already exists. ";
             } else {
                 $data = [
-                    "borrower_id"   => $borrower->id
+                    "borrower_id"   => 3521 //$borrower->id
                 ];
 
 
                 $response = $this->rexBank->CreateWallet($data);
+                Log::info($response);
                 if ($response && isset($response['status']) && $response['status'] == 'success') {
                 } else {
                     $isCreateWallet = false;
@@ -1484,6 +1485,7 @@ class WalletController extends Controller
             $data = $request->validated();
         } catch (\Illuminate\Validation\ValidationException $e) {
             $errors = $e->validator->errors()->all();
+            Log::info($errors);
             return $this->error($errors[0]);
         }
 
