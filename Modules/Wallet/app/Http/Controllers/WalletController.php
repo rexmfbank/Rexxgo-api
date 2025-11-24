@@ -3,6 +3,7 @@
 namespace Modules\Wallet\app\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Mail\GenericMail;
 use App\Models\Beneficiary;
 use App\Models\Borrower;
 use App\Models\LiquidationAddress;
@@ -17,6 +18,7 @@ use App\Traits\ApiResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Modules\Notification\app\Http\Controllers\NotificationController;
 use Modules\Notification\Services\FirebaseService;
 use Modules\Wallet\app\Http\Requests\ExternalAccountRequest;
@@ -1485,7 +1487,6 @@ class WalletController extends Controller
             $data = $request->validated();
         } catch (\Illuminate\Validation\ValidationException $e) {
             $errors = $e->validator->errors()->all();
-            Log::info($errors);
             return $this->error($errors[0]);
         }
 
@@ -1732,6 +1733,7 @@ class WalletController extends Controller
                     []
                 );
             }
+            Mail::to($borrower->email)->send(new GenericMail($notificationMessage, env("APP_NAME") . ' - DEBIT ALERT'));
             return response()->json([
                 "message" => "Transfer successful",
                 "external_account" => $externalAccountResponse,
@@ -2033,6 +2035,7 @@ class WalletController extends Controller
                     []
                 );
             }
+            Mail::to($borrower->email)->send(new GenericMail($notificationMessage, env("APP_NAME") . ' - DEBIT ALERT'));
 
             $res = new TransactionResource($newTransaction);
 
@@ -2195,6 +2198,7 @@ class WalletController extends Controller
                     []
                 );
             }
+            Mail::to($borrower->email)->send(new GenericMail($notificationMessage, env("APP_NAME") . ' - DEBIT ALERT'));
 
             $res = new TransactionResource($newTransaction);
 
@@ -2357,6 +2361,7 @@ class WalletController extends Controller
                     []
                 );
             }
+            Mail::to($borrower->email)->send(new GenericMail($notificationMessage, env("APP_NAME") . ' - DEBIT ALERT'));
 
             $res = new TransactionResource($newTransaction);
 
@@ -2650,6 +2655,7 @@ class WalletController extends Controller
 
             $data = $request->all();
             $response = $this->rexBank->VerifyAccountNumber($data);
+            Log::info($response);
             if ($response && isset($response['status']) && $response['status'] == 'success') {
                 return $this->success($response['data'], 'Acount verified.');
             } else {

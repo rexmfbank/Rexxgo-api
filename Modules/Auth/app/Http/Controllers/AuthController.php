@@ -3,6 +3,7 @@
 namespace Modules\Auth\app\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Mail\GenericMail;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -14,8 +15,10 @@ use App\Models\LoginActivity;
 use App\Models\WebhookLog;
 use \Modules\Auth\app\Models\PasswordResetToken;
 use Carbon\Carbon;
+use Illuminate\Mail\Message;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Modules\Notification\Services\FirebaseService;
 use Modules\Wallet\app\Http\Controllers\WalletController;
 use Modules\Wallet\Services\BridgeService;
@@ -262,8 +265,7 @@ class AuthController extends Controller
         // Example OTP email
         $msg  = 'Please use the following OTP to verify your Email: ' . $otp . ' (expires in 5 minutes).';
         $msg .= "\n\nIf you did not request this, ignore this message.";
-        $view = view("emails.generic", ['msg' => $msg]);
-        tribearcSendMail(env("APP_NAME") . " - Your OTP", $view, $email);
+        Mail::to($email)->send(new GenericMail($msg, env("APP_NAME") . " - Your OTP"));
 
         return $this->success([
             'email'      => $request->email,
@@ -673,9 +675,8 @@ class AuthController extends Controller
             $msg .= env('APP_NAME') . " Team";
 
             // Send the OTP email
-            $view = view("emails.generic", ['msg' => $msg]);
             $email = $borrower->email;
-            tribearcSendMail(env("APP_NAME") . " - Your Login 2FA OTP", $view, $email);
+            Mail::to($email)->send(new GenericMail($msg, env("APP_NAME") . " - Your Login 2FA OTP"));
 
             return $this->success([
                 'user_id' => base64_encode($borrower->id),
@@ -964,10 +965,9 @@ public function checkEmail(Request $request)
         $msg .= "\n\nIf you did not request this, please ignore this message.";
         $msg .= "\n\nThank you for using our service.";
 
-        $view = view("emails.generic", ['msg' => $msg]);
         $email =  $borrower->email;
-        tribearcSendMail(env("APP_NAME") . " - Your OTP is here...", $view, $email);
-
+        Mail::to($email)->send(new GenericMail($msg, env("APP_NAME") . " - Your OTP is here..."));
+        
         return $this->success([
             'email' => $borrower->email,
             'expires_in' => 300,

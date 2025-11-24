@@ -3,6 +3,7 @@
 namespace Modules\Profile\app\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Mail\GenericMail;
 use App\Models\Borrower;
 use App\Models\Savings;
 use App\Models\SavingsProduct;
@@ -14,6 +15,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Modules\Profile\app\Http\Resources\LoginActivityResource;
 use Modules\Profile\app\Http\Resources\UserResource;
 use Modules\Wallet\Services\BridgeService;
@@ -251,11 +253,9 @@ public function enableTwoFa(Request $request)
     $msg .= "Thank you for keeping your account secure,\n";
     $msg .= env('APP_NAME') . " Team";
 
-    $view = view("emails.generic", ['msg' => $msg]);
     $email = $borrower->email;
-    tribearcSendMail(env("APP_NAME") . " - Verify Your 2FA Setup", $view, $email);
 
-
+    Mail::to($email)->send(new GenericMail($msg, env("APP_NAME") . " - Verify Your 2FA Setup"));
 
     return $this->success([
         'message' => '2FA code sent to your email. Use it to verify and enable 2FA.'
