@@ -2404,13 +2404,21 @@ class WalletController extends Controller
      */
     public function TransferNgn(Request $request)
     {
-        $request->validate([
-            'wallet_id' => 'required|string',
-            'amount' => 'required|string',
-            'recipient_code' => 'required',
-            'transaction_pin' => 'required|digits:4',
-            'reason' => '',
-        ]);
+        try {
+            $request->validate([
+                'wallet_id' => 'required|string',
+                'amount' => 'required|string',
+                'recipient_code' => 'required',
+                'transaction_pin' => 'required|digits:4',
+                'reason' => '',
+            ]);
+            // $data = $request->validated();
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::info("getting here");
+            $errors = $e->validator->errors()->all();
+            return $this->error($errors[0]);
+        }
+
         try {
             if (!auth()->guard('borrower')->check()) {
                 return $this->error('Invalid access token, Please Login', 401);
