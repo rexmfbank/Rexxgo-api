@@ -326,10 +326,10 @@ class BridgeWebhookController extends Controller
             $dateOnly = $carbonDate->format('Y-m-d');
             $reference = "REX-USD-" . date("Ymdhsi") . '-' . uniqid();
 
-            $initialStatus = ($activityType === 'funds_received' || $activityType === 'payment_processed') ? 'completed' : (($activityType === 'payment_failed' || $activityType === 'cancelled') ? 'failed' : 'pending');
+            $initialStatus = ($activityType === 'funds_received' || $activityType === 'payment_processed') ? 'successful' : (($activityType === 'payment_failed' || $activityType === 'cancelled') ? 'failed' : 'pending');
 
             $finalWalletBalance = $wallet->available_balance;
-            if ($initialStatus === 'completed') {
+            if ($initialStatus === 'successful') {
                 $finalWalletBalance += $amount;
             } else {
             }
@@ -362,7 +362,7 @@ class BridgeWebhookController extends Controller
             ]);
 
 
-            if ($initialStatus === 'completed') {
+            if ($initialStatus === 'successful') {
                 $wallet->increment('available_balance', $amount);
                 $notificationMessage = 'You just recieved USD ' . $amount . ' from ' . $senderName . '.';
                 $notificationController = new NotificationController();
@@ -401,8 +401,8 @@ class BridgeWebhookController extends Controller
 
                 case 'funds_received':
                 case 'payment_processed':
-                    if ($currentStatus != 'completed') {
-                        $newStatus = 'completed';
+                    if ($currentStatus != 'successful') {
+                        $newStatus = 'successful';
                         $shouldUpdateWallet = true;
                         $notificationMessage = 'You just recieved USD ' . $amount . ' from ' . $senderName . '.';
                         $notificationController = new NotificationController();
@@ -420,7 +420,7 @@ class BridgeWebhookController extends Controller
 
                         $notificationController->createNotification($notificationRequest);
                         
-                    } else if ($currentStatus === 'completed') {
+                    } else if ($currentStatus === 'successful') {
                         
                     }
                     break;
@@ -430,7 +430,7 @@ class BridgeWebhookController extends Controller
                     if ($currentStatus === 'pending') {
                         $newStatus = 'failed';
                         
-                    } else if ($currentStatus === 'completed') {
+                    } else if ($currentStatus === 'successful') {
                         
                     }
                     break;
@@ -526,14 +526,14 @@ class BridgeWebhookController extends Controller
 
         $isExist = SavingsTransaction::where("external_tx_id", $externalReference)->first();
         if($isExist){
-            if($isExist->status_id == "completed"){
+            if($isExist->status_id == "successful"){
                 return;
             }
             $reference = $isExist->reference;
             $finalWalletBalance = $isExist->balance;
         }
 
-        if ($status === 'completed') {
+        if ($status === 'successful') {
             $finalWalletBalance += $amount;
             $wallet->increment('available_balance', $amount);
             $wallet->increment('ledger_balance', $amount);
@@ -577,7 +577,7 @@ class BridgeWebhookController extends Controller
             ]
         );
 
-         if ($status === 'completed') {
+         if ($status === 'successful') {
              $notificationMessage = 'Your ' .$wallet->currency. ' wallet just received '. $amount ;
             $notificationController = new NotificationController();
             $notificationRequest = [
@@ -624,7 +624,7 @@ class BridgeWebhookController extends Controller
             'payment_confirmed',
             'payment_completed',
             'payment_processed',
-            'wallet.transaction.processed' => 'completed',
+            'wallet.transaction.processed' => 'successful',
 
             default => 'pending',
         };
