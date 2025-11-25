@@ -1373,7 +1373,7 @@ class WalletController extends Controller
                     'bridge_wallet_id' => $sourceWallet->bridge_id,
                     'currency' => 'usdc',
                 ];
-
+                Log::info([$source, $destination]);
                 $data = $this->bridgeService->Transfer($borrower->bridge_customer_id, $reference, $source, $destination, $amount);
 
                 $transferId = $data['id'];
