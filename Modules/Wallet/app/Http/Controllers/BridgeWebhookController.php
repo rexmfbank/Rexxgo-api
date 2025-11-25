@@ -495,7 +495,8 @@ class BridgeWebhookController extends Controller
         if($isTransactionInitiatedHere){
             $isTransactionInitiatedHere->status_id = $status;
             if(!empty($isTransactionInitiatedHere->treasury_transfer_details)){
-                $rexPayload = $isTransactionInitiatedHere->treasury_transfer_details;
+                $rexPayload = json_decode($isTransactionInitiatedHere->treasury_transfer_details, true);
+                Log::info($rexPayload);
 
                 $creditTreasury = $this->rexBank->SendMoneyInternal($rexPayload);
                 if (!$creditTreasury) {
