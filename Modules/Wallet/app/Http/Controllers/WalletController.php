@@ -1370,10 +1370,9 @@ class WalletController extends Controller
 
                 $source = [
                     'payment_rail' => 'bridge_wallet',
-                    'bridge_wallet_id' => $sourceWallet->bridge_id,
+                    'bridge_wallet_id' => $sourceWallet->destination_id,
                     'currency' => 'usdc',
                 ];
-                Log::info([$source, $destination]);
                 $data = $this->bridgeService->Transfer($borrower->bridge_customer_id, $reference, $source, $destination, $amount);
 
                 $transferId = $data['id'];
