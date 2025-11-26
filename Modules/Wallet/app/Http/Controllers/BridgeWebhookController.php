@@ -492,9 +492,7 @@ class BridgeWebhookController extends Controller
 
         //check if the transfer was made on this platform 
         $isTransactionInitiatedHere = SavingsTransaction::where("reference", $clientReferenceId)->first();
-        if($isTransactionInitiatedHere){
-            $isTransactionInitiatedHere->status_id = $status;
-        }
+        
         $wallet = Savings::where('account_number', $toAddress)->orWhere('destination_address', $toAddress)->first();
 
         if (!$wallet) {
@@ -518,28 +516,29 @@ class BridgeWebhookController extends Controller
             $finalWalletBalance = $isExist->balance;
         }
 
-        if ($status === 'successful') {
+        if ($status == 'successful') {
             $finalWalletBalance += $amount;
             $wallet->increment('available_balance', $amount);
             $wallet->increment('ledger_balance', $amount);
 
+            if($isTransactionInitiatedHere){
+                $isTransactionInitiatedHere->status_id = $status;
+                if(!empty($isTransactionInitiatedHere->treasury_transfer_details)){
+                    $rexPayload = json_decode($isTransactionInitiatedHere->treasury_transfer_details, true);
+                    Log::info($rexPayload);
 
-            if(!empty($isTransactionInitiatedHere->treasury_transfer_details)){
-                $rexPayload = json_decode($isTransactionInitiatedHere->treasury_transfer_details, true);
-                Log::info($rexPayload);
-
-                $creditTreasury = $this->rexBank->SendMoneyInternal($rexPayload);
-                Log::info($creditTreasury);
-                if (!$creditTreasury) {
-                    //trigger notification to admin
-                } elseif (!isset($creditTreasury['status']) || $creditTreasury['status'] != 'success') {
-                    //trigger notification to admin
-                } elseif (isset($creditTreasury['status']) && $creditTreasury['status'] == 'success') {
-                    $isTransactionInitiatedHere->treasury_transfer_details = "";
+                    $creditTreasury = $this->rexBank->SendMoneyInternal($rexPayload);
+                    Log::info($creditTreasury);
+                    if (!$creditTreasury) {
+                        //trigger notification to admin
+                    } elseif (!isset($creditTreasury['status']) || $creditTreasury['status'] != 'success') {
+                        //trigger notification to admin
+                    } elseif (isset($creditTreasury['status']) && $creditTreasury['status'] == 'success') {
+                        $isTransactionInitiatedHere->treasury_transfer_details = "";
+                    }
                 }
+                $isTransactionInitiatedHere->save();
             }
-            $isTransactionInitiatedHere->save();
-
         } 
         $category = "fund_received";
         $details = [
