@@ -529,7 +529,7 @@ class BridgeWebhookController extends Controller
                 Log::info($rexPayload);
 
                 $creditTreasury = $this->rexBank->SendMoneyInternal($rexPayload);
-                Log::info($rexPayload);
+                Log::info($creditTreasury);
                 if (!$creditTreasury) {
                     //trigger notification to admin
                 } elseif (!isset($creditTreasury['status']) || $creditTreasury['status'] != 'success') {
@@ -539,7 +539,7 @@ class BridgeWebhookController extends Controller
                 }
             }
             $isTransactionInitiatedHere->save();
-            
+
         } 
         $category = "fund_received";
         $details = [
