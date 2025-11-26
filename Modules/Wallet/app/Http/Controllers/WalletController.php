@@ -1220,7 +1220,7 @@ class WalletController extends Controller
                     'provider' => 'bridge',
                 ]);
             } elseif ($sourceWallet->currency == SavingsProduct::$usdc && $destinationWallet->currency == SavingsProduct::$ngn) {
-
+                Log::info("its entering here");
                 $rate = Rate::where('base_currency', 'USDC')
                     ->where('target_currency', 'NGN')
                     ->first();
@@ -1267,7 +1267,7 @@ class WalletController extends Controller
                 }
 
                 $destination = [
-                    'payment_rail' => $treasuryWalletUSDC['destination_rail'] ?? "ethereum",
+                    'payment_rail' => "ethereum",
                     'bridge_wallet_id' => $treasuryWalletUSDC['bridge_id'],
                     'currency' => "usdc",
                 ];
