@@ -346,9 +346,9 @@ class WalletController extends Controller
                 DB::table('borrowers')->where('id', $borrower->id)->update(['wallet_created' => true]);
             }
             $status = $isCreateWallet ? 200 : 400;
-            if($isCreateWallet){
+            if ($isCreateWallet) {
                 return $this->success('Wallets Created.');
-            }else {
+            } else {
                 return $this->error($errorMessage);
             }
             // return response()->json([
@@ -968,7 +968,7 @@ class WalletController extends Controller
                 $sourceWallet->ledger_balance -= $amount;
 
                 $sourceWallet->save();
-                
+
                 $newTransaction = SavingsTransaction::create([
                     'reference' => $reference,
                     'borrower_id' => $userId,
@@ -1011,7 +1011,7 @@ class WalletController extends Controller
                 $sourceWallet->ledger_balance -= $amount;
 
                 $sourceWallet->save();
-                
+
                 $newTransaction = SavingsTransaction::create([
                     'reference' => $reference,
                     'borrower_id' => $userId,
@@ -1032,7 +1032,6 @@ class WalletController extends Controller
                     'provider' => 'bridge',
                 ]);
                 $res = new TransactionResource($newTransaction);
-
             } elseif ($sourceWallet->currency == SavingsProduct::$ngn && $destinationWallet->currency == SavingsProduct::$usd) {
                 $rate = Rate::where('base_currency', 'NGN')
                     ->where('target_currency', 'USD')
@@ -1044,8 +1043,8 @@ class WalletController extends Controller
 
                 $convertedAmount = $amount * $rate->rate;
 
-                if($convertedAmount < 1){
-                    return response()->json(['error' => $convertedAmount . ' ' . $destinationWallet->currency . ' cannot be transferred. Minimum is 1'.$destinationWallet->currency], 404);
+                if ($convertedAmount < 1) {
+                    return response()->json(['error' => $convertedAmount . ' ' . $destinationWallet->currency . ' cannot be transferred. Minimum is 1' . $destinationWallet->currency], 404);
                 }
                 $ngnTreasury = Treasury::where('currency', 'NGN')->first();
                 if (!$ngnTreasury) {
@@ -1108,7 +1107,7 @@ class WalletController extends Controller
                 $transferId = $data['id'];
 
                 $res = SavingsTransaction::create([
-                    'reference' => $reference.'treasury',
+                    'reference' => $reference . 'treasury',
                     'borrower_id' => $treasuryWalletUSD->borrower_id,
                     'savings_id' => $treasuryWalletUSD->id,
                     'transaction_amount' => $convertedAmount,
@@ -1126,7 +1125,6 @@ class WalletController extends Controller
                     'external_tx_id' => $transferId . '_init',
                     'provider' => 'bridge',
                 ]);
-
             } elseif ($sourceWallet->currency == SavingsProduct::$ngn && $destinationWallet->currency == SavingsProduct::$usdc) {
                 $rate = Rate::where('base_currency', 'NGN')
                     ->where('target_currency', 'USDC')
@@ -1138,8 +1136,8 @@ class WalletController extends Controller
 
                 $convertedAmount = $amount * $rate->rate;
 
-                if($convertedAmount < 1){
-                    return response()->json(['error' => $convertedAmount . ' ' . $destinationWallet->currency . ' cannot be transferred. Minimum is 1'.$destinationWallet->currency], 404);
+                if ($convertedAmount < 1) {
+                    return response()->json(['error' => $convertedAmount . ' ' . $destinationWallet->currency . ' cannot be transferred. Minimum is 1' . $destinationWallet->currency], 404);
                 }
                 $ngnTreasury = Treasury::where('currency', 'NGN')->first();
                 if (!$ngnTreasury) {
@@ -1201,8 +1199,8 @@ class WalletController extends Controller
                 $transferId = $data['id'];
 
                 $res = SavingsTransaction::create([
-                    'reference' => $reference.'treasury',
-                    'borrower_id' =>$treasuryWalletUSDC->borrower_id,
+                    'reference' => $reference . 'treasury',
+                    'borrower_id' => $treasuryWalletUSDC->borrower_id,
                     'savings_id' => $treasuryWalletUSDC->id,
                     'transaction_amount' => $convertedAmount,
                     'balance' => $treasuryWalletUSDC->available_balance,
@@ -1231,14 +1229,14 @@ class WalletController extends Controller
 
                 $convertedAmount = $amount * $rate->rate;
 
-                if($convertedAmount < 1500){
-                    return $this->error($convertedAmount . ' ' . $destinationWallet->currency . ' cannot be transferred. Minimum is 1'.$destinationWallet->currency);
+                if ($convertedAmount < 1500) {
+                    return $this->error($convertedAmount . ' ' . $destinationWallet->currency . ' cannot be transferred. Minimum is 1' . $destinationWallet->currency);
                 }
 
                 if (empty($destinationWallet->account_number)) {
                     return $this->error('Invalid destination wallet.');
                 }
-                
+
                 $usdcTreasury = Treasury::where('currency', 'USDC')->first();
                 if (!$usdcTreasury) {
                     return $this->error('An error occured.');
@@ -1260,13 +1258,11 @@ class WalletController extends Controller
 
                 $treasuryWalletNGN = Savings::where("id", $ngnTreasury->savings_id)->first();
                 if (!$treasuryWalletNGN) {
-                                        return $this->error('An error occured.');
-
+                    return $this->error('An error occured.');
                 }
 
                 if ($treasuryWalletNGN->available_balance < $convertedAmount) {
-                                        return $this->error('An error occured.');
-
+                    return $this->error('An error occured.');
                 }
 
                 $destination = [
@@ -1274,7 +1270,7 @@ class WalletController extends Controller
                     'bridge_wallet_id' => $treasuryWalletUSDC['bridge_id'],
                     'currency' => "usdc",
                 ];
-                
+
 
                 $source = [
                     'payment_rail' => 'bridge_wallet',
@@ -1290,7 +1286,7 @@ class WalletController extends Controller
                 $sourceWallet->ledger_balance -= $amount;
 
                 $sourceWallet->save();
-                
+
                 $newTransaction = SavingsTransaction::create([
                     'reference' => $reference,
                     'borrower_id' => $userId,
@@ -1330,13 +1326,13 @@ class WalletController extends Controller
 
                 $convertedAmount = $amount * $rate->rate;
 
-                if($convertedAmount < 1500){
-                    return response()->json(['error' => $convertedAmount . ' ' . $destinationWallet->currency . ' cannot be transferred. Minimum is 1'.$destinationWallet->currency], 404);
+                if ($convertedAmount < 1500) {
+                    return response()->json(['error' => $convertedAmount . ' ' . $destinationWallet->currency . ' cannot be transferred. Minimum is 1' . $destinationWallet->currency], 404);
                 }
                 if (empty($destinationWallet->account_number)) {
                     return response()->json(['error' => 'Invalid destination wallet'], 404);
                 }
-                
+
                 $usdTreasury = Treasury::where('currency', 'USD')->first();
                 if (!$usdTreasury) {
                     return response()->json(['error' => 'An error occured'], 404);
@@ -1384,7 +1380,7 @@ class WalletController extends Controller
                 $sourceWallet->ledger_balance -= $amount;
 
                 $sourceWallet->save();
-                
+
                 $newTransaction = SavingsTransaction::create([
                     'reference' => $reference,
                     'borrower_id' => $userId,
@@ -1504,12 +1500,12 @@ class WalletController extends Controller
         }
 
         $wallet = Savings::where("borrower_id", $borrower->id)->where("id", $data['wallet_id'])->first();
-        
+
         if (!$wallet || $wallet->account_number == "") {
             return $this->error('Invalid wallet selected', 400);
         }
 
-        if($wallet->currency != SavingsProduct::$ngn){
+        if ($wallet->currency != SavingsProduct::$ngn) {
             if ($wallet->bridge_id == "") {
                 return $this->error('Invalid wallet selected', 400);
             }
@@ -1522,20 +1518,20 @@ class WalletController extends Controller
 
         $amount = $data['amount'];
         $convertedAmount = 0;
-        if($wallet->currency != SavingsProduct::$usd){
+        if ($wallet->currency != SavingsProduct::$usd) {
             $rate = Rate::where('base_currency', 'USD')
-                    ->where('target_currency', $wallet->currency)
-                    ->first();
+                ->where('target_currency', $wallet->currency)
+                ->first();
 
             if (!$rate) {
                 return response()->json(['error' => 'Conversion rate not found.'], 404);
             }
 
             $convertedAmount = $amount * $rate->rate;
-            if($convertedAmount < 2000){
+            if ($convertedAmount < 2000) {
                 return response()->json(['error' => $convertedAmount . ' ' . $wallet->currency . ' cannot be transferred. Minimum is 2000'], 404);
             }
-        }else {
+        } else {
             if ($wallet->available_balance < $amount) {
                 return $this->error("Insufficient balance", 400);
             }
@@ -1551,8 +1547,8 @@ class WalletController extends Controller
             return response()->json(['error' => 'An error occured'], 404);
         }
         $treasuryWallet = null; //will set the value later based on the wallet selected 
-        
-        if($wallet->currency == SavingsProduct::$ngn){
+
+        if ($wallet->currency == SavingsProduct::$ngn) {
             $ngnTreasury = Treasury::where('currency', 'NGN')->first();
             if (!$ngnTreasury) {
                 return response()->json(['error' => 'An error occured'], 404);
@@ -1580,7 +1576,7 @@ class WalletController extends Controller
             } elseif (!isset($creditTreasury['status']) || $creditTreasury['status'] != 'success') {
                 return $this->error($response['message'] ?? "Something went wrong");
             }
-        }elseif($wallet->currency == SavingsProduct::$usdc){
+        } elseif ($wallet->currency == SavingsProduct::$usdc) {
             $usdcTreasury = Treasury::where('currency', 'USDC')->first();
             if (!$usdcTreasury) {
                 return response()->json(['error' => 'An error occured'], 404);
@@ -1631,13 +1627,13 @@ class WalletController extends Controller
             'ach_reference' => "Withdrawal",
         ];
 
-        if($wallet->currency == SavingsProduct::$usd){
+        if ($wallet->currency == SavingsProduct::$usd) {
             $source = [
                 'payment_rail' => 'bridge_wallet',
                 'bridge_wallet_id' => $wallet->destination_id,
                 'currency' => 'usdc',
             ];
-        }else{
+        } else {
             $source = [
                 'payment_rail' => 'bridge_wallet',
                 'bridge_wallet_id' => $treasuryWalletUSD->destination_id,
@@ -1645,13 +1641,13 @@ class WalletController extends Controller
             ];
         }
 
-        if($wallet->currency == SavingsProduct::$usdc){
+        if ($wallet->currency == SavingsProduct::$usdc) {
             $destination1 = [
                 'payment_rail' => $treasuryWallet['destination_rail'] ?? "ethereum",
                 'bridge_wallet_id' => $treasuryWallet['bridge_id'],
                 'currency' => "usdc",
             ];
-            
+
             $source1 = [
                 'payment_rail' => 'bridge_wallet',
                 'bridge_wallet_id' => $wallet->bridge_id,
@@ -1662,11 +1658,11 @@ class WalletController extends Controller
 
             $transferId = $data['id'];
 
-                       $amount = $data['amount'];
+            $amount = $data['amount'];
             $wallet->decrement('available_balance', $amount);
             $wallet->decrement('ledger_balance', $amount);
-            
-             SavingsTransaction::create([
+
+            SavingsTransaction::create([
                 'reference' => $reference,
                 'borrower_id' => $borrower->id,
                 'savings_id' => $wallet->id,
@@ -1690,13 +1686,12 @@ class WalletController extends Controller
                 ]),
                 'provider' => 'bridge',
             ]);
-             return response()->json([
+            return response()->json([
                 "message" => "Transfer successful",
                 "external_account" => $externalAccountResponse,
             ]);
-
         }
-        
+
 
         try {
             $transferResponse = $this->bridgeService->Transfer($borrower->bridge_customer_id, $reference, $source, $destination, $data['amount']);
@@ -1727,7 +1722,7 @@ class WalletController extends Controller
 
             $notificationController->createNotification($notificationRequest);
 
-            if(!empty($borrower->fcm_token)){
+            if (!empty($borrower->fcm_token)) {
                 $firebaseService = app()->make(\Modules\Notification\Services\FirebaseService::class);
                 $firebaseService->sendPush(
                     $borrower->fcm_token,
@@ -1818,31 +1813,31 @@ class WalletController extends Controller
 
         $amount = $data['amount'];
         $convertedAmount = 0;
-        if($wallet->currency != SavingsProduct::$usdc){
+        if ($wallet->currency != SavingsProduct::$usdc) {
             $rate = Rate::where('base_currency', 'USDC')
-                    ->where('target_currency', $wallet->currency)
-                    ->first();
+                ->where('target_currency', $wallet->currency)
+                ->first();
 
             if (!$rate) {
                 return response()->json(['error' => 'Conversion rate not found.'], 404);
             }
 
             $convertedAmount = $amount * $rate->rate;
-            if($wallet->currency == SavingsProduct::$ngn){
-                if($convertedAmount < 2000){
+            if ($wallet->currency == SavingsProduct::$ngn) {
+                if ($convertedAmount < 2000) {
                     return response()->json(['error' => $convertedAmount . ' ' . $wallet->currency . ' cannot be transferred. Minimum is 2000'], 404);
                 }
-            }else{
-                if($convertedAmount < 1){
+            } else {
+                if ($convertedAmount < 1) {
                     return response()->json(['error' => $convertedAmount . ' ' . $wallet->currency . ' cannot be transferred. Minimum is 1'], 404);
                 }
             }
-        }else {
+        } else {
             if ($wallet->available_balance < $amount) {
                 return $this->error("Insufficient balance", 400);
             }
         }
-            $reference = "REX-" . $wallet->currency . "-" . date("Ymdhsi") . '-' . $borrower->id . uniqid();
+        $reference = "REX-" . $wallet->currency . "-" . date("Ymdhsi") . '-' . $borrower->id . uniqid();
 
         $usdcTreasury = Treasury::where('currency', 'USDC')->first();
         if (!$usdcTreasury) {
@@ -1854,8 +1849,8 @@ class WalletController extends Controller
             return response()->json(['error' => 'An error occured'], 404);
         }
         $treasuryWallet = null; //will set the value later based on the wallet selected 
-        
-         if($wallet->currency == SavingsProduct::$ngn){
+
+        if ($wallet->currency == SavingsProduct::$ngn) {
             $ngnTreasury = Treasury::where('currency', 'NGN')->first();
             if (!$ngnTreasury) {
                 return response()->json(['error' => 'An error occured'], 404);
@@ -1883,7 +1878,7 @@ class WalletController extends Controller
             } elseif (!isset($creditTreasury['status']) || $creditTreasury['status'] != 'success') {
                 return $this->error($response['message'] ?? "Something went wrong");
             }
-        }elseif($wallet->currency == SavingsProduct::$usd){
+        } elseif ($wallet->currency == SavingsProduct::$usd) {
             $usdTreasury = Treasury::where('currency', 'USD')->first();
             if (!$usdTreasury) {
                 return response()->json(['error' => 'An error occured'], 404);
@@ -1911,13 +1906,13 @@ class WalletController extends Controller
             'currency' => 'usdc',
         ];
 
-        if($wallet->currency == SavingsProduct::$usdc){
+        if ($wallet->currency == SavingsProduct::$usdc) {
             $source = [
                 'payment_rail' => 'bridge_wallet',
                 'bridge_wallet_id' => $wallet->destination_id,
                 'currency' => 'usdc',
             ];
-        }else{
+        } else {
             $source = [
                 'payment_rail' => 'bridge_wallet',
                 'bridge_wallet_id' => $treasuryWalletUSDC->destination_id,
@@ -1925,13 +1920,13 @@ class WalletController extends Controller
             ];
         }
 
-        if($wallet->currency == SavingsProduct::$usd){
+        if ($wallet->currency == SavingsProduct::$usd) {
             $destination1 = [
                 'payment_rail' => $treasuryWallet['destination_rail'] ?? "ethereum",
                 'bridge_wallet_id' => $treasuryWallet['destination_id'],
                 'currency' => "usdc",
             ];
-            
+
             $source1 = [
                 'payment_rail' => 'bridge_wallet',
                 'bridge_wallet_id' => $wallet->destination_id,
@@ -1942,11 +1937,11 @@ class WalletController extends Controller
 
             $transferId = $data['id'];
 
-                       $amount = $data['amount'];
+            $amount = $data['amount'];
             $wallet->decrement('available_balance', $amount);
             $wallet->decrement('ledger_balance', $amount);
-            
-             $newTransaction = SavingsTransaction::create([
+
+            $newTransaction = SavingsTransaction::create([
                 'reference' => $reference,
                 'borrower_id' => $borrower->id,
                 'savings_id' => $wallet->id,
@@ -1955,7 +1950,7 @@ class WalletController extends Controller
                 'transaction_date' => now()->toDateString(),
                 'transaction_time' => now()->toTimeString(),
                 'transaction_type' => 'debit',
-                'transaction_description' => "USDC transfer to ".substr($data['destination_address'], -5),
+                'transaction_description' => "USDC transfer to " . substr($data['destination_address'], -5),
                 'debit' => $amount,
                 'credit' => 0,
                 'category' => 'fund_converted',
@@ -1981,17 +1976,17 @@ class WalletController extends Controller
 
 
             $data = $this->bridgeService->Transfer($borrower->bridge_customer_id, $reference, $source, $destination, $data['amount']);
-            
+
             if (!isset($data['id'])) {
                 $errorMessage = $data['message'] ?? "Unsupported conversion";
-                return $this->error($errorMessage );
+                return $this->error($errorMessage);
             }
 
             $transferId = $data['id'];
             $amount = $data['amount'];
             $wallet->decrement('available_balance', $amount);
             $wallet->decrement('ledger_balance', $amount);
-            
+
 
             $newTransaction = SavingsTransaction::create([
                 'reference' => $reference,
@@ -2002,7 +1997,7 @@ class WalletController extends Controller
                 'transaction_date' => now()->toDateString(),
                 'transaction_time' => now()->toTimeString(),
                 'transaction_type' => 'debit',
-                'transaction_description' => "USDC transfer to ".substr($data['destination_address'], -5),
+                'transaction_description' => "USDC transfer to " . substr($data['destination_address'], -5),
                 'debit' => $amount,
                 'credit' => 0,
                 'category' => 'fund_converted',
@@ -2013,7 +2008,7 @@ class WalletController extends Controller
                 'provider' => 'bridge',
             ]);
 
-            $notificationMessage = 'You transfered USDC' . $data['amount'] . ' to ' .substr($data['destination_address'], -5);
+            $notificationMessage = 'You transfered USDC' . $data['amount'] . ' to ' . substr($data['destination_address'], -5);
             $notificationController = new NotificationController();
             $notificationRequest = [
                 'type' => 'transaction',
@@ -2029,7 +2024,7 @@ class WalletController extends Controller
 
             $notificationController->createNotification($notificationRequest);
 
-            if(!empty($borrower->fcm_token)){
+            if (!empty($borrower->fcm_token)) {
                 $firebaseService = app()->make(\Modules\Notification\Services\FirebaseService::class);
                 $firebaseService->sendPush(
                     $borrower->fcm_token,
@@ -2148,7 +2143,7 @@ class WalletController extends Controller
 
             if (!isset($data['id'])) {
                 $errorMessage = $data['message'] ?? "Unsupported conversion";
-                return $this->error($errorMessage . ' ' .$destintionWallet->bridge_id );
+                return $this->error($errorMessage . ' ' . $destintionWallet->bridge_id);
             }
 
             $transferId = $data['id'];
@@ -2176,7 +2171,7 @@ class WalletController extends Controller
                 'external_tx_id' => $transferId . '_init',
                 'provider' => 'bridge',
             ]);
-            $notificationMessage = 'You transfered USDC' . $data['amount'] . ' to ' .$destinationUser->first_name. ' ' .$destinationUser->first_name;
+            $notificationMessage = 'You transfered USDC' . $data['amount'] . ' to ' . $destinationUser->first_name . ' ' . $destinationUser->first_name;
             $notificationController = new NotificationController();
             $notificationRequest = [
                 'type' => 'transaction',
@@ -2192,7 +2187,7 @@ class WalletController extends Controller
 
             $notificationController->createNotification($notificationRequest);
 
-            if(!empty($borrower->fcm_token)){
+            if (!empty($borrower->fcm_token)) {
                 $firebaseService = app()->make(\Modules\Notification\Services\FirebaseService::class);
                 $firebaseService->sendPush(
                     $borrower->fcm_token,
@@ -2301,7 +2296,7 @@ class WalletController extends Controller
             'bridge_wallet_id' => $wallet->destination_id, //bridge aumatically route usd transaction to a crypto wallet called desitination, a Bridge Wallet
             'currency' => 'usdc',
         ];
-         
+
         try {
 
             $reference = "REX-" . $wallet->currency . "-" . date("Ymdhsi") . '-' . $borrower->id . uniqid();
@@ -2310,7 +2305,7 @@ class WalletController extends Controller
 
             if (!isset($data['id'])) {
                 $errorMessage = $data['message'] ?? "Unsupported conversion";
-                return $this->error($errorMessage . ' ' .$destintionWallet->bridge_id );
+                return $this->error($errorMessage . ' ' . $destintionWallet->bridge_id);
             }
 
             $transferId = $data['id'];
@@ -2339,7 +2334,7 @@ class WalletController extends Controller
                 'provider' => 'bridge',
             ]);
 
-            $notificationMessage = 'You transfered USD' . $data['amount'] . ' to ' .$destinationUser->first_name. ' ' .$destinationUser->first_name;
+            $notificationMessage = 'You transfered USD' . $data['amount'] . ' to ' . $destinationUser->first_name . ' ' . $destinationUser->first_name;
             $notificationController = new NotificationController();
             $notificationRequest = [
                 'type' => 'transaction',
@@ -2355,7 +2350,7 @@ class WalletController extends Controller
 
             $notificationController->createNotification($notificationRequest);
 
-            if(!empty($borrower->fcm_token)){
+            if (!empty($borrower->fcm_token)) {
                 $firebaseService = app()->make(\Modules\Notification\Services\FirebaseService::class);
                 $firebaseService->sendPush(
                     $borrower->fcm_token,
@@ -2437,193 +2432,192 @@ class WalletController extends Controller
             $wallet = DB::table('savings')->where("borrower_id", $borrower->id)->where("id", $data['wallet_id'])->first();
 
             $wallet = Savings::where("borrower_id", $borrower->id)->where("id", $data['wallet_id'])->first();
-        
-        if (!$wallet || $wallet->account_number == "") {
-            return $this->error('Invalid wallet selected', 400);
-        }
-        if($wallet->currency == SavingsProduct::$ngn){
-            if ($data['amount'] < 100) {
-                return $this->error("Amount should be minimum of NGN100", 400);
-            }
-        }
-        if (!Hash::check($data['transaction_pin'], $borrower->pin)) {
-            return $this->error('Invalid transaction pin', 400);
-        }
 
-        $amount = $data['amount'];
-        $convertedAmount = 0;
-        
-        if($wallet->currency != SavingsProduct::$ngn){
-            $rate = Rate::where('base_currency', 'NGN')
+            if (!$wallet || $wallet->account_number == "") {
+                return $this->error('Invalid wallet selected', 400);
+            }
+            if ($wallet->currency == SavingsProduct::$ngn) {
+                if ($data['amount'] < 100) {
+                    return $this->error("Amount should be minimum of NGN100", 400);
+                }
+            }
+            if (!Hash::check($data['transaction_pin'], $borrower->pin)) {
+                return $this->error('Invalid transaction pin', 400);
+            }
+
+            $amount = $data['amount'];
+            $convertedAmount = 0;
+
+            if ($wallet->currency != SavingsProduct::$ngn) {
+                $rate = Rate::where('base_currency', 'NGN')
                     ->where('target_currency', $wallet->currency)
                     ->first();
 
-            if (!$rate) {
-                return response()->json(['error' => 'Conversion rate not found.'], 404);
-            }
+                if (!$rate) {
+                    return response()->json(['error' => 'Conversion rate not found.'], 404);
+                }
 
-            $convertedAmount = $amount * $rate->rate;
-            if ($wallet->available_balance < $convertedAmount) {
+                $convertedAmount = $amount * $rate->rate;
+                if ($wallet->available_balance < $convertedAmount) {
+                    return $this->error("Insufficient balance", 400);
+                }
+            } elseif ($wallet->available_balance < $amount) {
                 return $this->error("Insufficient balance", 400);
             }
 
-        }elseif ($wallet->available_balance < $amount) {
-                return $this->error("Insufficient balance", 400);
-        }
-
-        $ngnTreasury = Treasury::where('currency', 'NGN')->first();
-        if (!$ngnTreasury) {
-            return response()->json(['error' => 'An error occured'], 404);
-        }
-
-        $treasuryWalletNGN = Savings::where("id", $ngnTreasury->savings_id)->first();
-        if (!$treasuryWalletNGN) {
-            return response()->json(['error' => 'An error occured'], 404);
-        }
-
-        $treasuryWallet = null; //will set the value later based on the wallet selected 
-        
-        // $data['borrower_id'] = 65;
-        $data['borrower_id'] = $borrower->id;
-
-        if($wallet->currency == SavingsProduct::$usd) {
-            $usdTreasury = Treasury::where('currency', 'USD')->first();
-            if (!$usdTreasury) {
+            $ngnTreasury = Treasury::where('currency', 'NGN')->first();
+            if (!$ngnTreasury) {
                 return response()->json(['error' => 'An error occured'], 404);
             }
 
-            $treasuryWallet = Savings::where("id", $usdTreasury->savings_id)->first();
-            if (!$treasuryWallet) {
-                return response()->json(['error' => 'An error occured'], 404);
-            }
-            
-            $destination = [
-                'payment_rail' => $treasuryWallet['destination_rail'] ?? "ethereum",
-                'bridge_wallet_id' => $treasuryWallet['destination_id'],
-                'currency' => $treasuryWallet['destination_currency'],
-            ];
-
-            $source = [
-                'payment_rail' => 'bridge_wallet',
-                'bridge_wallet_id' => $wallet->destination_id, //bridge aumatically route usd transaction to a crypto wallet called desitination, a Bridge Wallet
-                'currency' => 'usdc',
-            ];
-
-            $reference = "REX-" . $wallet->currency . "-" . date("Ymdhsi") . '-' . $borrower->id . uniqid();
-
-            $data = $this->bridgeService->Transfer($borrower->bridge_customer_id, $reference, $source, $destination, $convertedAmount);
-
-            if (!isset($data['id'])) {
-                $errorMessage = $data['message'] ?? "Unsupported conversion";
-                return $this->error($errorMessage . ' ' .$treasuryWallet->bridge_id );
-            }
-
-            $transferId = $data['id'];
-            $amount = $data['amount'];
-            $wallet->decrement('available_balance', $amount);
-            $wallet->decrement('ledger_balance', $amount);
-
-
-            $newTransaction = SavingsTransaction::create([
-                'reference' => $reference,
-                'borrower_id' => $borrower->id,
-                'savings_id' => $wallet->id,
-                'transaction_amount' => $convertedAmount,
-                'balance' => $wallet->available_balance,
-                'transaction_date' => now()->toDateString(),
-                'transaction_time' => now()->toTimeString(),
-                'transaction_type' => 'debit',
-                'transaction_description' => "Wallet transfer",
-                'debit' => $convertedAmount,
-                'credit' => 0,
-                'category' => 'fund_converted',
-                'status_id' => 'pending',
-                'currency' => $wallet->currency ?? 'USD',
-                'external_response' => json_encode($data, JSON_PRETTY_PRINT),
-                'external_tx_id' => $transferId . '_init',
-                'provider' => 'bridge',
-                "treasury_transfer_details" => json_encode([
-                    'amount' => $data['amount'],
-                    'recipient_code' => $data['recipient_code'],
-                    'transaction_pin' => $data['transaction_pin'],
-                    'reason' => $data['reason'],
-                    "type" => "NGN",
-                ])
-            ]);
-            $res = new TransactionResource($newTransaction);
-            return $this->success($res, 'Transfer initiated successfully. ');
-        }elseif($wallet->currency == SavingsProduct::$usdc) {
-            $usdcTreasury = Treasury::where('currency', 'USDC')->first();
-            if (!$usdcTreasury) {
+            $treasuryWalletNGN = Savings::where("id", $ngnTreasury->savings_id)->first();
+            if (!$treasuryWalletNGN) {
                 return response()->json(['error' => 'An error occured'], 404);
             }
 
-            $treasuryWallet = Savings::where("id", $usdcTreasury->savings_id)->first();
-            if (!$treasuryWallet) {
-                return response()->json(['error' => 'An error occured'], 404);
+            $treasuryWallet = null; //will set the value later based on the wallet selected 
+
+            // $data['borrower_id'] = 65;
+            $data['borrower_id'] = $borrower->id;
+
+            if ($wallet->currency == SavingsProduct::$usd) {
+                $usdTreasury = Treasury::where('currency', 'USD')->first();
+                if (!$usdTreasury) {
+                    return response()->json(['error' => 'An error occured'], 404);
+                }
+
+                $treasuryWallet = Savings::where("id", $usdTreasury->savings_id)->first();
+                if (!$treasuryWallet) {
+                    return response()->json(['error' => 'An error occured'], 404);
+                }
+
+                $destination = [
+                    'payment_rail' => $treasuryWallet['destination_rail'] ?? "ethereum",
+                    'bridge_wallet_id' => $treasuryWallet['destination_id'],
+                    'currency' => $treasuryWallet['destination_currency'],
+                ];
+
+                $source = [
+                    'payment_rail' => 'bridge_wallet',
+                    'bridge_wallet_id' => $wallet->destination_id, //bridge aumatically route usd transaction to a crypto wallet called desitination, a Bridge Wallet
+                    'currency' => 'usdc',
+                ];
+
+                $reference = "REX-" . $wallet->currency . "-" . date("Ymdhsi") . '-' . $borrower->id . uniqid();
+
+                $data = $this->bridgeService->Transfer($borrower->bridge_customer_id, $reference, $source, $destination, $convertedAmount);
+
+                if (!isset($data['id'])) {
+                    $errorMessage = $data['message'] ?? "Unsupported conversion";
+                    return $this->error($errorMessage . ' ' . $treasuryWallet->bridge_id);
+                }
+
+                $transferId = $data['id'];
+                $amount = $data['amount'];
+                $wallet->decrement('available_balance', $amount);
+                $wallet->decrement('ledger_balance', $amount);
+
+
+                $newTransaction = SavingsTransaction::create([
+                    'reference' => $reference,
+                    'borrower_id' => $borrower->id,
+                    'savings_id' => $wallet->id,
+                    'transaction_amount' => $convertedAmount,
+                    'balance' => $wallet->available_balance,
+                    'transaction_date' => now()->toDateString(),
+                    'transaction_time' => now()->toTimeString(),
+                    'transaction_type' => 'debit',
+                    'transaction_description' => "Wallet transfer",
+                    'debit' => $convertedAmount,
+                    'credit' => 0,
+                    'category' => 'fund_converted',
+                    'status_id' => 'pending',
+                    'currency' => $wallet->currency ?? 'USD',
+                    'external_response' => json_encode($data, JSON_PRETTY_PRINT),
+                    'external_tx_id' => $transferId . '_init',
+                    'provider' => 'bridge',
+                    "treasury_transfer_details" => json_encode([
+                        'amount' => $data['amount'],
+                        'recipient_code' => $data['recipient_code'],
+                        'transaction_pin' => $data['transaction_pin'],
+                        'reason' => $data['reason'],
+                        "type" => "NGN",
+                    ])
+                ]);
+                $res = new TransactionResource($newTransaction);
+                return $this->success($res, 'Transfer initiated successfully. ');
+            } elseif ($wallet->currency == SavingsProduct::$usdc) {
+                $usdcTreasury = Treasury::where('currency', 'USDC')->first();
+                if (!$usdcTreasury) {
+                    return response()->json(['error' => 'An error occured'], 404);
+                }
+
+                $treasuryWallet = Savings::where("id", $usdcTreasury->savings_id)->first();
+                if (!$treasuryWallet) {
+                    return response()->json(['error' => 'An error occured'], 404);
+                }
+
+                $destination = [
+                    'payment_rail' => $treasuryWallet['destination_rail'] ?? "ethereum",
+                    'bridge_wallet_id' => $treasuryWallet['bridge_id'],
+                    'currency' => "usdc",
+                ];
+
+                $source = [
+                    'payment_rail' => 'bridge_wallet',
+                    'bridge_wallet_id' => $wallet->bridge_id, //bridge aumatically route usd transaction to a crypto wallet called desitination, a Bridge Wallet
+                    'currency' => 'usdc',
+                ];
+
+                $reference = "REX-" . $wallet->currency . "-" . date("Ymdhsi") . '-' . $borrower->id . uniqid();
+
+                $data = $this->bridgeService->Transfer($borrower->bridge_customer_id, $reference, $source, $destination, $amount);
+
+                if (!isset($data['id'])) {
+                    $errorMessage = $data['message'] ?? "Unsupported conversion";
+                    return $this->error($errorMessage . ' ' . $treasuryWallet->bridge_id);
+                }
+
+                $transferId = $data['id'];
+                $amount = $data['amount'];
+                $wallet->decrement('available_balance', $amount);
+                $wallet->decrement('ledger_balance', $amount);
+
+                $newTransaction = SavingsTransaction::create([
+                    'reference' => $reference,
+                    'borrower_id' => $borrower->id,
+                    'savings_id' => $wallet->id,
+                    'transaction_amount' => $amount,
+                    'balance' => $wallet->available_balance,
+                    'transaction_date' => now()->toDateString(),
+                    'transaction_time' => now()->toTimeString(),
+                    'transaction_type' => 'debit',
+                    'transaction_description' => "Wallet transfer",
+                    'debit' => $amount,
+                    'credit' => 0,
+                    'category' => 'fund_converted',
+                    'status_id' => 'pending',
+                    'currency' => $wallet->currency ?? 'USD',
+                    'external_response' => json_encode($data, JSON_PRETTY_PRINT),
+                    'external_tx_id' => $transferId . '_init',
+                    'provider' => 'bridge',
+                    "treasury_transfer_details" => json_encode([
+                        'amount' => $convertedAmount,
+                        'recipient_code' => $data['recipient_code'],
+                        'transaction_pin' => $data['transaction_pin'],
+                        'reason' => $data['reason'],
+                        "type" => "NGN",
+                    ])
+                ]);
+                $res = new TransactionResource($newTransaction);
+                return $this->success($res, 'Transfer initiated successfully. ');
             }
-            
-            $destination = [
-                'payment_rail' => $treasuryWallet['destination_rail'] ?? "ethereum",
-                'bridge_wallet_id' => $treasuryWallet['bridge_id'],
-                'currency' => "usdc",
-            ];
-
-            $source = [
-                'payment_rail' => 'bridge_wallet',
-                'bridge_wallet_id' => $wallet->bridge_id, //bridge aumatically route usd transaction to a crypto wallet called desitination, a Bridge Wallet
-                'currency' => 'usdc',
-            ];
-
-            $reference = "REX-" . $wallet->currency . "-" . date("Ymdhsi") . '-' . $borrower->id . uniqid();
-            
-            $data = $this->bridgeService->Transfer($borrower->bridge_customer_id, $reference, $source, $destination, $amount);
-
-            if (!isset($data['id'])) {
-                $errorMessage = $data['message'] ?? "Unsupported conversion";
-                return $this->error($errorMessage . ' ' .$treasuryWallet->bridge_id );
+            $response = $this->rexBank->SendMoney($data);
+            if ($response && isset($response['status']) && $response['status'] == 'success') {
+                return $this->success($response['data'], 'Transfer successful');
+            } else {
+                return $this->error($response['message'] ?? "Something went wrong");
             }
-
-            $transferId = $data['id'];
-            $amount = $data['amount'];
-            $wallet->decrement('available_balance', $amount);
-            $wallet->decrement('ledger_balance', $amount);
-
-            $newTransaction = SavingsTransaction::create([
-                'reference' => $reference,
-                'borrower_id' => $borrower->id,
-                'savings_id' => $wallet->id,
-                'transaction_amount' => $amount,
-                'balance' => $wallet->available_balance,
-                'transaction_date' => now()->toDateString(),
-                'transaction_time' => now()->toTimeString(),
-                'transaction_type' => 'debit',
-                'transaction_description' => "Wallet transfer",
-                'debit' => $amount,
-                'credit' => 0,
-                'category' => 'fund_converted',
-                'status_id' => 'pending',
-                'currency' => $wallet->currency ?? 'USD',
-                'external_response' => json_encode($data, JSON_PRETTY_PRINT),
-                'external_tx_id' => $transferId . '_init',
-                'provider' => 'bridge',
-                "treasury_transfer_details" => json_encode([
-                    'amount' => $convertedAmount,
-                    'recipient_code' => $data['recipient_code'],
-                    'transaction_pin' => $data['transaction_pin'],
-                    'reason' => $data['reason'],
-                    "type" => "NGN",
-                ])
-            ]);
-            $res = new TransactionResource($newTransaction);
-            return $this->success($res, 'Transfer initiated successfully. ');
-        }
-        $response = $this->rexBank->SendMoney($data);
-        if ($response && isset($response['status']) && $response['status'] == 'success') {
-            return $this->success($response['data'], 'Transfer successful');
-        } else {
-            return $this->error($response['message'] ?? "Something went wrong");
-        }
         } catch (\RuntimeException $e) {
             return response()->json([
                 'success' => false,
@@ -2703,6 +2697,27 @@ class WalletController extends Controller
     {
         $banks = $this->rexBank->GetBanks();
         if (!isset($banks['data'])) return $this->error($banks['message'] ?? 'unable to fetch banks');
+        $data = $banks['data'];
+        $bank_data = [
+            'id' => 0,
+            'name' => 'REX MICROFINANCE BANK',
+            'slug' => 'rex-mfb',
+            'code' => '090449',
+            'longcode' => '090449',
+            'gateway' => null,
+            'pay_with_bank' => false,
+            'supports_transfer' => true,
+            'available_for_direct_debit' => false,
+            'active' => true,
+            'country' => 'Nigeria',
+            'currency' => 'NGN',
+            'type' => 'nuban',
+            'is_deleted' => false,
+            'createdAt' => '2025-11-21T12:32:33.000Z',
+            'updatedAt' => '2025-11-21T12:32:33.000Z',
+        ];
+        $banks['data'] = [$bank_data, ...$data];
+
         return $this->success($banks['data'], 'Transactions retrieved successfully', 200);
     }
 
