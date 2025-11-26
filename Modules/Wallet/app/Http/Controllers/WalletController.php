@@ -2662,7 +2662,7 @@ class WalletController extends Controller
             $data = $request->all();
             $data['borrower_id'] = auth()->guard('borrower')->user()->id;
             $response = $this->rexBank->VerifyAccountNumber($data);
-            Log::info($response);
+            Log::info($data);
             if ($response && isset($response['status']) && $response['status'] == 'success') {
                 return $this->success($response['data'], 'Acount verified.');
             } else {
