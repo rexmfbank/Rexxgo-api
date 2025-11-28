@@ -1308,8 +1308,8 @@ class WalletController extends Controller
                         "from_account_number" => $treasuryWalletNGN->account_number,
                         "to_account_number" => $destinationWallet->account_number,
                         "amount" => $convertedAmount,
-                        "borrower_id" => base64_encode($borrower->id),
-                        "pin" => $request->transaction_pin
+                        "borrower_id" => base64_encode($treasuryWalletNGN->borrower_id),
+                        "pin" => env("REX_TREASURY")
                     ]),
                     'provider' => 'bridge',
                 ]);
@@ -1402,8 +1402,8 @@ class WalletController extends Controller
                         "from_account_number" => $treasuryWalletNGN->account_number,
                         "to_account_number" => $destinationWallet->account_number,
                         "amount" => $convertedAmount,
-                        "borrower_id" => base64_encode($borrower->id),
-                        "pin" => $request->transaction_pin
+                        "borrower_id" => base64_encode($treasuryWalletNGN->borrower_id),
+                        "pin" => env("REX_TREASURY")
                     ]),
                     'provider' => 'bridge',
                 ]);
@@ -2539,8 +2539,9 @@ class WalletController extends Controller
                     "treasury_transfer_details" => json_encode([
                         'amount' => $data['amount'],
                         'recipient_code' => $data['recipient_code'],
-                        'transaction_pin' => $data['transaction_pin'],
                         'reason' => $data['reason'],
+                        'currency' => "NGN",
+                        'external_tx_id' => $transferId . '_init',
                         "type" => "NGN",
                     ])
                 ]);
@@ -2602,10 +2603,11 @@ class WalletController extends Controller
                     'external_tx_id' => $transferId . '_init',
                     'provider' => 'bridge',
                     "treasury_transfer_details" => json_encode([
-                        'amount' => $convertedAmount,
+                        'amount' => $data['amount'],
                         'recipient_code' => $data['recipient_code'],
-                        'transaction_pin' => $data['transaction_pin'],
                         'reason' => $data['reason'],
+                        'currency' => "NGN",
+                        'external_tx_id' => $transferId . '_init',
                         "type" => "NGN",
                     ])
                 ]);
