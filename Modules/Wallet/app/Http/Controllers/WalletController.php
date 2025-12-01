@@ -2458,6 +2458,7 @@ class WalletController extends Controller
                 }
 
                 $convertedAmount = $amount * $rate->rate;
+                return $this->error($convertedAmount . ' ' . $amount);
                 if ($wallet->available_balance < $convertedAmount) {
                     return $this->error("Insufficient balance", 400);
                 }
@@ -2504,7 +2505,7 @@ class WalletController extends Controller
                 ];
 
                 $reference = "REX-" . $wallet->currency . "-" . date("Ymdhsi") . '-' . $borrower->id . uniqid();
-
+                $convertedAmount = number_format($convertedAmount, 2, '.', '');
                 $data = $this->bridgeService->Transfer($borrower->bridge_customer_id, $reference, $source, $destination, $convertedAmount);
 
                 if (!isset($data['id'])) {
@@ -2571,8 +2572,9 @@ class WalletController extends Controller
                 ];
 
                 $reference = "REX-" . $wallet->currency . "-" . date("Ymdhsi") . '-' . $borrower->id . uniqid();
+                $convertedAmount = number_format($convertedAmount, 2, '.', '');
 
-                $data = $this->bridgeService->Transfer($borrower->bridge_customer_id, $reference, $source, $destination, $amount);
+                $data = $this->bridgeService->Transfer($borrower->bridge_customer_id, $reference, $source, $destination, $convertedAmount);
 
                 if (!isset($data['id'])) {
                     $errorMessage = $data['message'] ?? "Unsupported conversion";
@@ -2588,13 +2590,13 @@ class WalletController extends Controller
                     'reference' => $reference,
                     'borrower_id' => $borrower->id,
                     'savings_id' => $wallet->id,
-                    'transaction_amount' => $amount,
+                    'transaction_amount' => $convertedAmount,
                     'balance' => $wallet->available_balance,
                     'transaction_date' => now()->toDateString(),
                     'transaction_time' => now()->toTimeString(),
                     'transaction_type' => 'debit',
                     'transaction_description' => "Wallet transfer",
-                    'debit' => $amount,
+                    'debit' => $convertedAmount,
                     'credit' => 0,
                     'category' => 'fund_converted',
                     'status_id' => 'pending',
