@@ -2449,8 +2449,8 @@ class WalletController extends Controller
             $convertedAmount = 0;
 
             if ($wallet->currency != SavingsProduct::$ngn) {
-                $rate = Rate::where('base_currency', 'NGN')
-                    ->where('target_currency', $wallet->currency)
+                $rate = Rate::where('base_currency', $wallet->currency)
+                    ->where('target_currency', 'NGN')
                     ->first();
 
                 if (!$rate) {
