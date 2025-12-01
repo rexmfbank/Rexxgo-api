@@ -2458,8 +2458,7 @@ class WalletController extends Controller
                 }
 
                 $convertedAmount = $amount * $rate->rate;
-                return $this->error($convertedAmount . ' ' . $amount);
-                if ($wallet->available_balance < $convertedAmount) {
+                if ($wallet->available_balance < $amount) {
                     return $this->error("Insufficient balance", 400);
                 }
             } elseif ($wallet->available_balance < $amount) {
@@ -2505,8 +2504,8 @@ class WalletController extends Controller
                 ];
 
                 $reference = "REX-" . $wallet->currency . "-" . date("Ymdhsi") . '-' . $borrower->id . uniqid();
-                $convertedAmount = number_format($convertedAmount, 2, '.', '');
-                $data = $this->bridgeService->Transfer($borrower->bridge_customer_id, $reference, $source, $destination, $convertedAmount);
+                $amount = number_format($amount, 2, '.', '');
+                $data = $this->bridgeService->Transfer($borrower->bridge_customer_id, $reference, $source, $destination, $amount);
 
                 if (!isset($data['id'])) {
                     $errorMessage = $data['message'] ?? "Unsupported conversion";
@@ -2523,13 +2522,13 @@ class WalletController extends Controller
                     'reference' => $reference,
                     'borrower_id' => $borrower->id,
                     'savings_id' => $wallet->id,
-                    'transaction_amount' => $convertedAmount,
+                    'transaction_amount' => $amount,
                     'balance' => $wallet->available_balance,
                     'transaction_date' => now()->toDateString(),
                     'transaction_time' => now()->toTimeString(),
                     'transaction_type' => 'debit',
                     'transaction_description' => "Wallet transfer",
-                    'debit' => $convertedAmount,
+                    'debit' => $amount,
                     'credit' => 0,
                     'category' => 'fund_converted',
                     'status_id' => 'pending',
@@ -2538,7 +2537,7 @@ class WalletController extends Controller
                     'external_tx_id' => $transferId . '_init',
                     'provider' => 'bridge',
                     "treasury_transfer_details" => json_encode([
-                        'amount' => $data['amount'],
+                        'amount' => $convertedAmount,
                         'recipient_code' => $data['recipient_code'],
                         'reason' => $data['reason'],
                         'currency' => "NGN",
@@ -2572,9 +2571,9 @@ class WalletController extends Controller
                 ];
 
                 $reference = "REX-" . $wallet->currency . "-" . date("Ymdhsi") . '-' . $borrower->id . uniqid();
-                $convertedAmount = number_format($convertedAmount, 2, '.', '');
+                $amount = number_format($amount, 2, '.', '');
 
-                $data = $this->bridgeService->Transfer($borrower->bridge_customer_id, $reference, $source, $destination, $convertedAmount);
+                $data = $this->bridgeService->Transfer($borrower->bridge_customer_id, $reference, $source, $destination, $amount);
 
                 if (!isset($data['id'])) {
                     $errorMessage = $data['message'] ?? "Unsupported conversion";
@@ -2590,13 +2589,13 @@ class WalletController extends Controller
                     'reference' => $reference,
                     'borrower_id' => $borrower->id,
                     'savings_id' => $wallet->id,
-                    'transaction_amount' => $convertedAmount,
+                    'transaction_amount' => $amount,
                     'balance' => $wallet->available_balance,
                     'transaction_date' => now()->toDateString(),
                     'transaction_time' => now()->toTimeString(),
                     'transaction_type' => 'debit',
                     'transaction_description' => "Wallet transfer",
-                    'debit' => $convertedAmount,
+                    'debit' => $amount,
                     'credit' => 0,
                     'category' => 'fund_converted',
                     'status_id' => 'pending',
@@ -2605,7 +2604,7 @@ class WalletController extends Controller
                     'external_tx_id' => $transferId . '_init',
                     'provider' => 'bridge',
                     "treasury_transfer_details" => json_encode([
-                        'amount' => $data['amount'],
+                        'amount' => $convertedAmount,
                         'recipient_code' => $data['recipient_code'],
                         'reason' => $data['reason'],
                         'currency' => "NGN",

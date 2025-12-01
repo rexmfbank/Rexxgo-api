@@ -526,8 +526,12 @@ class BridgeWebhookController extends Controller
                 if(!empty($isTransactionInitiatedHere->treasury_transfer_details)){
                     $rexPayload = json_decode($isTransactionInitiatedHere->treasury_transfer_details, true);
                     Log::info($rexPayload);
-
-                    $creditTreasury = $this->rexBank->SendMoneyInternal($rexPayload);
+                    if(isset($rexPayload['type']) && $rexPayload['type'] == "NGN"){
+                        unset($rexPayload['type']);
+                        $creditTreasury = $this->rexBank->TransferFromTreasury($rexPayload);
+                    }else {
+                        $creditTreasury = $this->rexBank->SendMoneyInternal($rexPayload);
+                    }
                     Log::info($creditTreasury);
                     if (!$creditTreasury) {
                         //trigger notification to admin

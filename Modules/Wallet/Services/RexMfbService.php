@@ -100,4 +100,23 @@ class RexMfbService
 
         return $body;
     }
+
+    public function TransferFromTreasury(array $data)
+    {
+        $baseUrl = rtrim(env('REX_MFB_BASEURL'), '/');
+        $url = "{$baseUrl}/transfer-from-treasury";
+
+
+        $response = Http::withHeaders([
+            'Content-Type' => 'application/json',
+            'x-client-id' => env('REX_MFB_ClientId'),
+            'x-client-secret' => env('REX_MFB_ClientSecret'),
+            'x-source-code' => env('REX_MFB_SourceCode'),
+            'X-Company-ID' => env('REX_MFB_CompanyId'),
+        ])->post($url, $data);
+
+        $body = $response->json();
+
+        return $body;
+    }
 }
