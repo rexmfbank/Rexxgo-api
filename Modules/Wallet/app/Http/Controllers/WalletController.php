@@ -2422,7 +2422,7 @@ class WalletController extends Controller
                 return $this->error('Invalid access token, Please Login', 401);
             }
             $data = $request->all();
-            return $this->error($data['recipient_code']);
+            $requestData = $request->all();
             $borrower = Borrower::find(auth()->guard('borrower')->user()->id);
 
             if (!$borrower) {
@@ -2538,8 +2538,8 @@ class WalletController extends Controller
                     'provider' => 'bridge',
                     "treasury_transfer_details" => json_encode([
                         'amount' => $convertedAmount,
-                        'recipient_code' => $data['recipient_code'],
-                        'reason' => $data['reason'],
+                        'recipient_code' => $requestData['recipient_code'],
+                        'reason' => $requestData['reason'],
                         'currency' => "NGN",
                         'external_tx_id' => $transferId . '_init',
                         "type" => "NGN",
@@ -2605,8 +2605,8 @@ class WalletController extends Controller
                     'provider' => 'bridge',
                     "treasury_transfer_details" => json_encode([
                         'amount' => $convertedAmount,
-                        'recipient_code' => $data['recipient_code'],
-                        'reason' => $data['reason'],
+                        'recipient_code' => $requestData['recipient_code'],
+                        'reason' => $requestData['reason'],
                         'currency' => "NGN",
                         'external_tx_id' => $transferId . '_init',
                         "type" => "NGN",
