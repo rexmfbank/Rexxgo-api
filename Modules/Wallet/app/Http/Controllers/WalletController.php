@@ -2422,7 +2422,7 @@ class WalletController extends Controller
                 return $this->error('Invalid access token, Please Login', 401);
             }
             $data = $request->all();
-
+            return $this->error($data['recipient_code']);
             $borrower = Borrower::find(auth()->guard('borrower')->user()->id);
 
             if (!$borrower) {
