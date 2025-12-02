@@ -825,11 +825,14 @@ public function checkEmail(Request $request)
      */
     protected function respondWithToken($token, $message = 'Success')
     {
+        $user = Auth::guard('borrower')->user();
+         $user->photo = $user->photo ? url($user->photo) : null;
+        $user->avatar = $user->photo ? url($user->photo) : null;
         $data = [
             'access_token' => $token,
             'token_type'   => 'bearer',
             'expires_in'   => config('jwt.ttl') * 60, // seconds
-            'user' => Auth::guard('borrower')->user()
+            'user' => $user
         ];
 
         return $this->success($data, $message);
