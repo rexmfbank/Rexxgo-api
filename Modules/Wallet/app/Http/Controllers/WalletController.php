@@ -1553,6 +1553,9 @@ class WalletController extends Controller
             if (!$rate) {
                 return response()->json(['error' => 'Conversion rate not found.'], 404);
             }
+            if ($wallet->available_balance < $amount) {
+                return $this->error("Insufficient balance", 400);
+            }
 
             $convertedAmount = $amount * $rate->rate;
             if ($convertedAmount < 0.9) {
@@ -1598,6 +1601,7 @@ class WalletController extends Controller
             ];
 
             $creditTreasury = $this->rexBank->SendMoneyInternal($treasuryData);
+            Log::info($creditTreasury);
             if (!$creditTreasury) {
                 return $this->error($response['message'] ?? "Something went wrong");
             } elseif (!isset($creditTreasury['status']) || $creditTreasury['status'] != 'success') {
