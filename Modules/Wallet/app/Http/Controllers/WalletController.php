@@ -1768,7 +1768,7 @@ class WalletController extends Controller
         ]);
             Mail::to($borrower->email)->send(new GenericMail($notificationMessage, env("APP_NAME") . ' - DEBIT ALERT'));
 
-            return $this->success($externalAccountResponse, "Transfer successful");
+            return $this->success($transferResponse, "Transfer successful");
         } catch (\RuntimeException $e) {
             return response()->json([
                 'success' => false,
