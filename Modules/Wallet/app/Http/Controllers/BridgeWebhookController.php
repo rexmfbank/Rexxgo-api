@@ -469,7 +469,7 @@ class BridgeWebhookController extends Controller
         if($activityType == "in_review") return;
 
         $status = $this->mapEventToStatus($activityType);
-        Log::info($status. " STatus fromeventmappng");
+        Log::info($object. " STatus fromeventmappng");
         $externalReference = $event['event_object_id'] ?? null;
         $clientReferenceId = $object['client_reference_id'] ?? null;
         $amount = $object['receipt']['final_amount'] ?? 0;
@@ -500,7 +500,6 @@ class BridgeWebhookController extends Controller
             return;
         }
         $borrower = Borrower::where('id', $wallet->borrower_id)->first();
-        Log::info([$wallet, $toAddress]);
         
         $reference = "REX-" . $wallet->currency . "-" . date("Ymdhsi") . '-' . $borrower->id . uniqid();
 
