@@ -500,7 +500,7 @@ class BridgeWebhookController extends Controller
             return;
         }
         $borrower = Borrower::where('id', $wallet->borrower_id)->first();
-            
+        Log::info($wallet);
         
         $reference = "REX-" . $wallet->currency . "-" . date("Ymdhsi") . '-' . $borrower->id . uniqid();
 
