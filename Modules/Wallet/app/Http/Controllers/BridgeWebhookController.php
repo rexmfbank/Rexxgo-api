@@ -61,7 +61,7 @@ class BridgeWebhookController extends Controller
                 'error' => $e->getMessage(),
             ], 400);
         } catch (\Exception $e) {
-            Log::info($e);
+            Log::error($e);
             return response()->json(['error' => 'Invalid JSON'], 400);
         }
     }
