@@ -469,7 +469,6 @@ class BridgeWebhookController extends Controller
         if($activityType == "in_review") return;
 
         $status = $this->mapEventToStatus($activityType);
-        Log::info(json_encode($object). " STatus fromeventmappng");
         $externalReference = $event['event_object_id'] ?? null;
         $clientReferenceId = $object['client_reference_id'] ?? null;
         $amount = $object['receipt']['final_amount'] ?? 0;
@@ -492,7 +491,10 @@ class BridgeWebhookController extends Controller
 
         //check if the transfer was made on this platform 
         $isTransactionInitiatedHere = SavingsTransaction::where("reference", $clientReferenceId)->first();
-        
+        if($toAddress == null){
+            Log::info("To address not found " . json_encode($object['destination']));
+            return;
+        }
         $wallet = Savings::where('account_number', $toAddress)->orWhere('destination_address', $toAddress)->first();
 
         if (!$wallet) {
