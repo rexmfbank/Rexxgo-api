@@ -346,7 +346,7 @@ public function getLoginActivities(Request $request)
         'total_items'  => $activities->total(),
         'per_page'     => $activities->perPage(),
     ];
-
+    Log::info(json_encode($meta, JSON_PRETTY_PRINT));
     return $this->success([
         'items' => $resourceCollection,
         'meta'  => $meta,
