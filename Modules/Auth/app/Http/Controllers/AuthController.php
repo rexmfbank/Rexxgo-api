@@ -17,6 +17,7 @@ use \Modules\Auth\app\Models\PasswordResetToken;
 use Carbon\Carbon;
 use Illuminate\Mail\Message;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Modules\Notification\Services\FirebaseService;
@@ -123,7 +124,7 @@ class AuthController extends Controller
                 'email'         => 'required|email|max:50',
                 'first_name'    => 'required|string|max:50',
                 'last_name'     => 'required|string|max:50',
-                'country' => 'required|string|in:NG,USA',
+                'country' => 'required|string|in:NG,US,UK,GB,CA,GH,KE,ZA,SA',
                 'middle_name'   => 'nullable|string|max:50',
             ]);
             // $data = $request->validated();
@@ -697,7 +698,8 @@ class AuthController extends Controller
             'borrower_id' => $borrower->id,
             'email'       => $request->email,
             'ip_address'  => $request->ip(),
-            'device'      => $request->userAgent()
+            'device'      => $request->userAgent(),
+            "country" => $this->getUserCountry()
         ]);
 
 
@@ -1040,6 +1042,25 @@ public function checkEmail(Request $request)
 
 
 
+    private function getUserCountry(): string
+    {
+        try {
+            $ip = request()->ip();
+            if ($ip === '127.0.0.1') {
+                return 'NG'; // localhost fallback
+            }
+
+            $response = Http::timeout(3)->get("https://ipapi.co/{$ip}/json/");
+
+            if ($response->successful() && isset($response['country'])) {
+                return $response['country']; // e.g. "NG"
+            }
+
+            return 'NG';
+        } catch (\Throwable $th) {
+            return "NG";
+        }
+    }
 
 
 

@@ -51,7 +51,7 @@ class NotificationController extends Controller
         $perPage = $request->query('pageSize', 15);
         $status = $request->query('status');
 
-        $query = Notification::where('borrower_id', $borrowerId);
+        $query = Notification::where('borrower_id', $borrowerId)->orderBy("id", "DESC");
 
         if ($status === 'read') {
             $query->where('read_at', "!=", null);

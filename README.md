@@ -80,4 +80,5 @@ php artisan migrate --path=database/migrations/2025_11_19_150336_add_profile_set
 php artisan migrate --path=database/migrations/2025_11_19_150833_create_login_activities_table.php
 php artisan migrate --path=database/migrations/2025_11_19_153529_add_two_fa_to_borrowers_table.php
 php artisan migrate --path=database/migrations/2025_12_08_100017_addcurrency_pair.php
+php artisan migrate --path=database/migrations/2025_12_08_115140_addoginactivities.php
 RCP_513uain9bva28q6
