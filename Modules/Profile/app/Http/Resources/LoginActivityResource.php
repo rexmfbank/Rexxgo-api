@@ -13,6 +13,7 @@ class LoginActivityResource extends JsonResource
             'email'       => $this->email,
             'ip_address'  => $this->ip_address,
             'device'      => $this->device,
+            'country'      => $this->country,
             'logged_at'   => $this->created_at->toDateTimeString(),
         ];
     }
