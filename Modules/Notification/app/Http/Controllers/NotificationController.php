@@ -7,6 +7,7 @@ use App\Models\Borrower;
 use App\Models\Notification;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Modules\Notification\app\Http\Resources\NotificationResource;
 
 class NotificationController extends Controller
@@ -68,7 +69,7 @@ class NotificationController extends Controller
             'total_items'  => $notifications->total(),
             'per_page'     => $notifications->perPage(),
         ];
-
+        Log::info($paginatedResource);
         return $this->success([
             'items' => $paginatedResource,
             'meta' => $meta,

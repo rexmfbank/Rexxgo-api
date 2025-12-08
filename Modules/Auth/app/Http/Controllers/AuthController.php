@@ -1042,25 +1042,26 @@ public function checkEmail(Request $request)
 
 
 
-    private function getUserCountry(): string
-    {
-        try {
-            $ip = request()->ip();
-            if ($ip === '127.0.0.1') {
-                return 'NG'; // localhost fallback
-            }
-
-            $response = Http::timeout(3)->get("https://ipapi.co/{$ip}/json/");
-            Log::info($response);
-            if ($response->successful() && isset($response['country'])) {
-                return $response['country']; // e.g. "NG"
-            }
-
-            return 'NG';
-        } catch (\Throwable $th) {
-            return "NG";
+private function getUserCountry(): string
+{
+    try {
+        $ip = request()->ip();
+        if ($ip === '127.0.0.1') {
+            return 'NG'; // local fallback
         }
+
+        $response = Http::timeout(3)->get("http://ipwho.is/{$ip}");
+
+        if ($response->successful() && $response['success'] === true) {
+            return $response['country_code'] ?? 'NG';
+        }
+
+        return 'NG';
+    } catch (\Throwable $th) {
+        return "NG";
     }
+}
+
 
 
 
