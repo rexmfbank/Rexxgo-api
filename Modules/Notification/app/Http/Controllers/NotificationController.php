@@ -69,7 +69,6 @@ class NotificationController extends Controller
             'total_items'  => $notifications->total(),
             'per_page'     => $notifications->perPage(),
         ];
-        Log::info($paginatedResource);
         return $this->success([
             'items' => $paginatedResource,
             'meta' => $meta,
