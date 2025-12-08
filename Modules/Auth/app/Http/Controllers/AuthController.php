@@ -634,10 +634,17 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         //validate email and password
-        $request->validate([
-            'email'    => 'required|email|max:50',
-            'password' => 'required|string|min:4|max:50',
-        ]);
+        try {
+            $request->validate([
+                'email'    => 'required|email|max:50',
+                'password' => 'required|string|min:4|max:50',
+            ]);
+            // $data = $request->validated();
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::info($request->all());
+            $errors = $e->validator->errors()->all();
+            return $this->error($errors[0]);
+        }
 
 
         $credentials = $request->only('email', 'password');
