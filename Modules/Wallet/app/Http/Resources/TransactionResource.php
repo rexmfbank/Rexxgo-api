@@ -29,6 +29,7 @@ class TransactionResource extends JsonResource
             'updated_at' => $this->updated_at,
             'category' => $this->category,
             'details' => json_decode($this->details),
+            "currency_pair" => $this->currency_pair
         ];
     }
 }

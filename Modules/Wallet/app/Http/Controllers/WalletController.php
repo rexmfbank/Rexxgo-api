@@ -1216,6 +1216,10 @@ class WalletController extends Controller
                     'external_response' => json_encode($data, JSON_PRETTY_PRINT),
                     'external_tx_id' => $transferId . '_init',
                     'provider' => 'bridge',
+                    "currency_pair" => json_encode([
+                        "from" => SavingsProduct::$ngn,
+                        "to" => SavingsProduct::$usdc
+                    ], JSON_PRETTY_PRINT)
                 ]);
             } elseif ($sourceWallet->currency == SavingsProduct::$usdc && $destinationWallet->currency == SavingsProduct::$ngn) {
                 Log::info("its entering here");
