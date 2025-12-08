@@ -115,15 +115,24 @@ class AuthController extends Controller
 
         app()->instance('tenant.company_id', $companyId);
 
-        $request->validate([
+       
+        try {
+            $request->validate([
             'customer_type' => 'required|string|in:Individual,Business',
-            'phone'         => 'required|string|max:15',
-            'email'         => 'required|email|max:50',
-            'first_name'    => 'required|string|max:50',
-            'last_name'     => 'required|string|max:50',
-            'country' => 'required|string|in:NG,USA',
-            'middle_name'   => 'nullable|string|max:50',
-        ]);
+                'phone'         => 'required|string|max:15',
+                'email'         => 'required|email|max:50',
+                'first_name'    => 'required|string|max:50',
+                'last_name'     => 'required|string|max:50',
+                'country' => 'required|string|in:NG,USA',
+                'middle_name'   => 'nullable|string|max:50',
+            ]);
+            // $data = $request->validated();
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::info("getting here");
+            Log::info($request->all());
+            $errors = $e->validator->errors()->all();
+            return $this->error($errors[0]);
+        }
 
         //check if email or phone already exists for this company
         //if email or phone exists, return error
