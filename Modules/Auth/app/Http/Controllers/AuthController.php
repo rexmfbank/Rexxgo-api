@@ -1051,7 +1051,7 @@ public function checkEmail(Request $request)
             }
 
             $response = Http::timeout(3)->get("https://ipapi.co/{$ip}/json/");
-
+            Log::info($response);
             if ($response->successful() && isset($response['country'])) {
                 return $response['country']; // e.g. "NG"
             }
