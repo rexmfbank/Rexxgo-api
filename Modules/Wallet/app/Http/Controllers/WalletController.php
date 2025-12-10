@@ -970,7 +970,14 @@ class WalletController extends Controller
 
                 $sourceWallet->available_balance -= $amount;
                 $sourceWallet->ledger_balance -= $amount;
+                
 
+                if(env("APP_ENV") == "local"){
+                    $destinationWallet->available_balance += $amount;
+                    $destinationWallet->ledger_balance += $amount;
+                    $destinationWallet->save();
+                }
+                
                 $sourceWallet->save();
 
                 $newTransaction = SavingsTransaction::create([
@@ -1352,7 +1359,7 @@ class WalletController extends Controller
                     "event_object" => $data
                 ];
                 $response = Http::post(url('/api/bridge/webhook'), $payloadData);
-                
+
                 $res = new TransactionResource($newTransaction);
             } elseif ($sourceWallet->currency == SavingsProduct::$usd && $destinationWallet->currency == SavingsProduct::$ngn) {
 
