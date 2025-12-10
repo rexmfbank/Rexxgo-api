@@ -498,8 +498,11 @@ class BridgeWebhookController extends Controller
             Log::info("To address not found " . json_encode($object['destination']));
             return;
         }
-        
-        $wallet = Savings::where('account_number', $toAddress)->orWhere('destination_address', $toAddress)->first();
+        if(env("APP_ENV") == "local"){
+            $wallet = Savings::where('account_number', $toAddress)->orWhere('destination_address', $toAddress)->orWhere('bridge_id', $toAddress)->orWhere('destination_id', $toAddress)->first();
+        }else{
+            $wallet = Savings::where('account_number', $toAddress)->orWhere('destination_address', $toAddress)->first();
+        }
         Log::info($wallet);
         Log::info("wallet");
         if (!$wallet) {
@@ -523,6 +526,7 @@ class BridgeWebhookController extends Controller
         }
 
         if ($status == 'successful') {
+            Log::info("transaction issuccesful");
             $finalWalletBalance += $amount;
             $wallet->increment('available_balance', $amount);
             $wallet->increment('ledger_balance', $amount);
@@ -530,6 +534,7 @@ class BridgeWebhookController extends Controller
             if($isTransactionInitiatedHere){
                 $isTransactionInitiatedHere->status_id = $status;
                 if(!empty($isTransactionInitiatedHere->treasury_transfer_details)){
+                    Log::info("treasury is not empty");
                     $rexPayload = json_decode($isTransactionInitiatedHere->treasury_transfer_details, true);
                     Log::info($rexPayload);
                     if(isset($rexPayload['type']) && $rexPayload['type'] == "NGN"){
@@ -548,6 +553,8 @@ class BridgeWebhookController extends Controller
                     }
                 }
                 $isTransactionInitiatedHere->save();
+            }else {
+                    Log::info("transaction is not initiated from rexxgo");
             }
         } 
         $category = "fund_received";
