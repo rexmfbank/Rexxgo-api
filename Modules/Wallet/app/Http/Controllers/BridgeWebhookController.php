@@ -127,7 +127,6 @@ class BridgeWebhookController extends Controller
         $objectId = $event['event_object']['id'] ?? 'N/A';
         $status = $event['event_object']['status'] ?? null;
         Log::info("Bridge Webhook Event Received: Type={$eventType}, Category={$category}, ObjectID={$objectId}, Status={$status}");
-        Log::info("entering here first");
         
         switch ($category) {
             case 'customer':
@@ -467,14 +466,18 @@ class BridgeWebhookController extends Controller
         $object = $event['event_object'] ?? [];
         $activityType = $event['event_object_status'] ?? null;
         if($activityType == "in_review") return;
+        Log::info("enteringwallet activities2");
 
         $status = $this->mapEventToStatus($activityType);
+        Log::info($status);
+
         $externalReference = $event['event_object_id'] ?? null;
         $clientReferenceId = $object['client_reference_id'] ?? null;
         $amount = $object['receipt']['final_amount'] ?? 0;
         $currency = strtoupper($object['currency'] ?? 'USD');
         $fromWallet = $object['source']['bridge_wallet_id'] ?? null;
         $toAddress = $object['destination']['to_address'] ?? null;
+        Log::info($toAddress);
         $paymentRail = $object['destination']['payment_rail'] ?? null;
         $txHash = $object['receipt']['destination_tx_hash'] ?? null;
         $receiptUrl = $object['receipt']['url'] ?? null;
@@ -495,8 +498,10 @@ class BridgeWebhookController extends Controller
             Log::info("To address not found " . json_encode($object['destination']));
             return;
         }
+        
         $wallet = Savings::where('account_number', $toAddress)->orWhere('destination_address', $toAddress)->first();
-
+        Log::info($wallet);
+        Log::info("wallet");
         if (!$wallet) {
             
             return;
