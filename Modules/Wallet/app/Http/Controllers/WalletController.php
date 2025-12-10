@@ -977,7 +977,7 @@ class WalletController extends Controller
                     $destinationWallet->ledger_balance += $amount;
                     $destinationWallet->save();
                 }
-                
+
                 $sourceWallet->save();
 
                 $newTransaction = SavingsTransaction::create([
@@ -1148,6 +1148,20 @@ class WalletController extends Controller
                     'external_tx_id' => $transferId . '_init',
                     'provider' => 'bridge',
                 ]);
+
+                $data['event_object_status'] = "payment_processed";
+                $payloadData = [
+                    "api_version" => "v0",
+                    "event_id" => "wh_t8TAhPPYrRV2v8Asi9ed3sw",
+                    "event_developer_id" => "371983-uery-1238-1238971",
+                    "event_category" => "transfer",
+                    "event_type" => "updated.status_transitioned",
+                    "event_object_id" => $data['id'],
+                    "event_object_status" => "payment_processed",
+                    "event_object" => $data
+                ];
+                $response = Http::post(url('/api/bridge/webhook'), $payloadData);
+                
             } elseif ($sourceWallet->currency == SavingsProduct::$ngn && $destinationWallet->currency == SavingsProduct::$usdc) {
                 $rate = Rate::where('base_currency', 'NGN')
                     ->where('target_currency', 'USDC')
