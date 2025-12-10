@@ -1862,7 +1862,7 @@ class WalletController extends Controller
             'debit' => $amountToSend,
             'credit' => 0,
             'category' => 'fund_sent',
-            'status_id' => 'pending',
+            'status_id' => env("APP_ENV") == "local" ? 'successful' : "pending",
             'currency' => $wallet->currency ?? 'USD',
             'external_response' => json_encode($transferResponse, JSON_PRETTY_PRINT),
             'external_tx_id' => $transferId . '_init',
