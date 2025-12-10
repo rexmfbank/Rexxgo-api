@@ -279,7 +279,7 @@ class BridgeService
     {
         if(env("APP_ENV") == "local"){
             Log::info("same old pain (:");
-            $generatePayload =$this->getBridgeResponse($amount, $destination, $customerId, $reference, "pending");
+            $generatePayload =$this->getBridgeResponse($amount, $destination, $reference, "pending");
             Log::info($generatePayload);
             return $generatePayload;
         }
