@@ -277,7 +277,8 @@ class BridgeService
 
     public function Transfer(string $customerId, $reference, array $source, array $destination, float $amount)
     {
-        if(env("APP_ENV")){
+        if(env("APP_ENV") == "local"){
+            Log::info("same old pain (:");
             return $this->getBridgeResponse($amount, $destination, $customerId, $reference, "pending");
         }
         $baseUrl = rtrim(env('BRIDGE_BASE_URL', 'https://api.bridge.xyz'), '/');
