@@ -1241,7 +1241,6 @@ class WalletController extends Controller
                     ], JSON_PRETTY_PRINT)
                 ]);
             } elseif ($sourceWallet->currency == SavingsProduct::$usdc && $destinationWallet->currency == SavingsProduct::$ngn) {
-                Log::info("its entering here");
                 $rate = Rate::where('base_currency', 'USDC')
                     ->where('target_currency', 'NGN')
                     ->first();
@@ -1340,6 +1339,20 @@ class WalletController extends Controller
                     ]),
                     'provider' => 'bridge',
                 ]);
+
+                 $data['event_object_status'] = "payment_processed";
+                $payloadData = [
+                    "api_version" => "v0",
+                    "event_id" => "wh_t8TAhPPYrRV2v8Asi9ed3sw",
+                    "event_developer_id" => "371983-uery-1238-1238971",
+                    "event_category" => "transfer",
+                    "event_type" => "updated.status_transitioned",
+                    "event_object_id" => $data['id'],
+                    "event_object_status" => "payment_processed",
+                    "event_object" => $data
+                ];
+                $response = Http::post(url('/api/bridge/webhook'), $payloadData);
+                
                 $res = new TransactionResource($newTransaction);
             } elseif ($sourceWallet->currency == SavingsProduct::$usd && $destinationWallet->currency == SavingsProduct::$ngn) {
 
@@ -1451,7 +1464,6 @@ class WalletController extends Controller
                     "event_object" => $data
                 ];
                 $response = Http::post(url('/api/bridge/webhook'), $payloadData);
-                Log::info($response);
 
 
             } else {
