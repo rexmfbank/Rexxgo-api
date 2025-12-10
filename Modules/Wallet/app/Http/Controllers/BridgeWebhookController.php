@@ -463,7 +463,7 @@ class BridgeWebhookController extends Controller
 
     protected function handleWalletActivities($event)
     {
-        
+        Log::info("enteringwallet activities");
         $object = $event['event_object'] ?? [];
         $activityType = $event['event_object_status'] ?? null;
         if($activityType == "in_review") return;
