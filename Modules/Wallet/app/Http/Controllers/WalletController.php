@@ -1019,6 +1019,12 @@ class WalletController extends Controller
 
                 $sourceWallet->save();
 
+                if(env("APP_ENV") == "local"){
+                    $destinationWallet->available_balance += $amount;
+                    $destinationWallet->ledger_balance += $amount;
+                    $destinationWallet->save();
+                }
+
                 $newTransaction = SavingsTransaction::create([
                     'reference' => $reference,
                     'borrower_id' => $userId,
