@@ -277,6 +277,9 @@ class BridgeService
 
     public function Transfer(string $customerId, $reference, array $source, array $destination, float $amount)
     {
+        if(env("APP_ENV")){
+            return $this->getBridgeResponse($amount, $destination, $customerId, $reference, "pending");
+        }
         $baseUrl = rtrim(env('BRIDGE_BASE_URL', 'https://api.bridge.xyz'), '/');
         $apiKey = env('BRIDGE_API_KEY');
         $idempotencyKey = (string)\Illuminate\Support\Str::uuid();
@@ -289,7 +292,6 @@ class BridgeService
             "client_reference_id" => $reference
         ];
 
-        Log::info(json_encode($payload));
         $response = \Illuminate\Support\Facades\Http::withHeaders([
             'Api-Key' => $apiKey,
             'Idempotency-Key' => $idempotencyKey,
@@ -412,5 +414,43 @@ class BridgeService
         }
 
         return $body;
+    }
+
+
+    private function getBridgeResponse($amount, $destination, $clientReference = "", $status = "pending")
+    {
+        $id = Str::uuid()->toString();
+        $array = [
+            "id" => $id,
+            "client_reference_id" => $clientReference,
+            "state" => $status,
+            "on_behalf_of" => "784889a0-064d-4d76-8edd-93c84c8cff32",
+            "currency" => "usd",
+            "amount" => $amount,
+            "developer_fee" => $amount,
+            "source" => [
+                "payment_rail" => "bridge_wallet",
+                "currency" => "usdc",
+                "bridge_wallet_id" => "c5d3955c-19c2-4e8e-bf21-ffdab089173d",
+                "from_address" => "0xf729cb179cf70aa79f1cdbdaeaab87c318a6c79f",
+            ],
+            "created_at" => "2025-12-08T14:10:29.214Z",
+            "updated_at" => "2025-12-08T14:10:29.306Z",
+            "destination" => $destination,
+            "receipt" => [
+                "initial_amount" => "1.0",
+                "developer_fee" => "0.0",
+                "exchange_fee" => "0.0",
+                "subtotal_amount" => "1.0",
+                "gas_fee" => "0.0",
+                "final_amount" => "1.0",
+            ],
+        ];
+        return $array;
+        // [
+        //         "payment_rail" => "ethereum",
+        //         "currency" => "usdc",
+        //         "to_address" => $toAddress,
+        //     ]
     }
 }
