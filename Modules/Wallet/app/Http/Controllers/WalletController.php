@@ -953,6 +953,9 @@ class WalletController extends Controller
                     'bridge_wallet_id' => $destinationWallet['destination_id'],
                     'currency' => $destinationWallet['destination_currency'],
                 ];
+                if(env("APP_ENV") == "local"){
+                    $destination['to_address'] = $destinationWallet['destination_id'];
+                }
 
                 $source = [
                     'payment_rail' => 'bridge_wallet',
@@ -996,6 +999,9 @@ class WalletController extends Controller
                     'bridge_wallet_id' => $destinationWallet['bridge_id'],
                     'currency' => "usdc",
                 ];
+                if(env("APP_ENV") == "local"){
+                    $destination['to_address'] = $destinationWallet['bridge_id'];
+                }
 
                 $source = [
                     'payment_rail' => 'bridge_wallet',
@@ -1091,6 +1097,9 @@ class WalletController extends Controller
                     'bridge_wallet_id' => $destinationWallet['destination_id'],
                     'currency' => $destinationWallet['destination_currency'],
                 ];
+                if(env("APP_ENV") == "local"){
+                    $destination['to_address'] = $destinationWallet['destination_id'];
+                }
 
                 $source = [
                     'payment_rail' => 'bridge_wallet',
@@ -1183,6 +1192,9 @@ class WalletController extends Controller
                     'bridge_wallet_id' => $destinationWallet['bridge_id'],
                     'currency' => "usdc",
                 ];
+                if(env("APP_ENV") == "local"){
+                    $destination['to_address'] = $destinationWallet['bridge_id'];
+                }
 
                 $source = [
                     'payment_rail' => 'bridge_wallet',
@@ -1274,6 +1286,10 @@ class WalletController extends Controller
                     'bridge_wallet_id' => $treasuryWalletUSDC['bridge_id'],
                     'currency' => "usdc",
                 ];
+                
+                if(env("APP_ENV") == "local"){
+                    $destination['to_address'] = $treasuryWalletUSDC['bridge_id'];
+                }
 
 
                 $source = [
@@ -1370,6 +1386,9 @@ class WalletController extends Controller
                     'bridge_wallet_id' => $treasuryWalletUSD['destination_id'],
                     'currency' => $treasuryWalletUSD['destination_currency'],
                 ];
+                if(env("APP_ENV") == "local"){
+                    $destination['to_address'] = $treasuryWalletUSD['destination_id'];
+                }
 
                 $source = [
                     'payment_rail' => 'bridge_wallet',
@@ -1635,6 +1654,9 @@ class WalletController extends Controller
             'currency' => "usd",
             'ach_reference' => "Withdrawal",
         ];
+        if(env("APP_ENV") == "local"){
+            $destination['to_address'] = "usd";
+        }
 
         if ($wallet->currency == SavingsProduct::$usd) {
             $source = [
@@ -1923,6 +1945,10 @@ class WalletController extends Controller
             'to_address' => $data['destination_address'],
             'currency' => 'usdc',
         ];
+        if(env("APP_ENV") == "local"){
+            $destination['to_address'] = "crypto";
+        }
+        
 
         $source = [
             'payment_rail' => 'bridge_wallet',
@@ -2107,6 +2133,9 @@ class WalletController extends Controller
             'bridge_wallet_id' => $destintionWallet->bridge_id,
             'currency' => 'usdc',
         ];
+        if(env("APP_ENV") == "local"){
+            $destination['to_address'] = "crypto";
+        }
 
         $source = [
             'payment_rail' => 'bridge_wallet',
@@ -2271,7 +2300,9 @@ class WalletController extends Controller
             'bridge_wallet_id' => $destintionWallet['destination_id'],
             'currency' => $destintionWallet['destination_currency'],
         ];
-
+        if(env("APP_ENV") == "local"){
+            $destination['to_address'] = $destintionWallet['destination_id'];
+        }
         $source = [
             'payment_rail' => 'bridge_wallet',
             'bridge_wallet_id' => $wallet->destination_id, //bridge aumatically route usd transaction to a crypto wallet called desitination, a Bridge Wallet
@@ -2544,6 +2575,9 @@ class WalletController extends Controller
                     'bridge_wallet_id' => $treasuryWallet['bridge_id'],
                     'currency' => "usdc",
                 ];
+                if(env("APP_ENV") == "local"){
+                    $destination['to_address'] = $treasuryWallet['bridge_id'];
+                }
 
                 $source = [
                     'payment_rail' => 'bridge_wallet',
