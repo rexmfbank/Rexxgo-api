@@ -279,7 +279,9 @@ class BridgeService
     {
         if(env("APP_ENV") == "local"){
             Log::info("same old pain (:");
-            return $this->getBridgeResponse($amount, $destination, $customerId, $reference, "pending");
+            $generatePayload =$this->getBridgeResponse($amount, $destination, $customerId, $reference, "pending");
+            Log::info($generatePayload);
+            return $generatePayload;
         }
         $baseUrl = rtrim(env('BRIDGE_BASE_URL', 'https://api.bridge.xyz'), '/');
         $apiKey = env('BRIDGE_API_KEY');
