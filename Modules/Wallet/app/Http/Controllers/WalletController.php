@@ -2581,6 +2581,10 @@ class WalletController extends Controller
                     'bridge_wallet_id' => $treasuryWallet['destination_id'],
                     'currency' => $treasuryWallet['destination_currency'],
                 ];
+                //coming here
+                if(env("APP_ENV") == "local"){
+                    $destination['to_address'] = $treasuryWallet['destination_id'];
+                }
 
                 $source = [
                     'payment_rail' => 'bridge_wallet',
