@@ -2637,6 +2637,7 @@ class WalletController extends Controller
                 $res = new TransactionResource($newTransaction);
 
                  if(env("APP_ENV") == "local"){
+                    Log::info($destination);
                     $data['event_object_status'] = "payment_processed";
                     $payloadData = [
                         "api_version" => "v0",
