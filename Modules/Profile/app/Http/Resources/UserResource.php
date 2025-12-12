@@ -31,7 +31,7 @@ class UserResource extends JsonResource
             'credit_score' => $this->credit_score,
 
             'photo' => $this->photo ? url("storage/".$this->photo) : null,
-            'avatar' => $this->photo ? url($this->photo) : null,
+            'avatar' => $this->photo ? url("storage/".$this->photo) : null,
 
             'description' => $this->description,
             'id_type' => $this->id_type,
