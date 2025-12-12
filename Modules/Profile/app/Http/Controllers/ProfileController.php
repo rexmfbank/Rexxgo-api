@@ -20,6 +20,7 @@ use Modules\Profile\app\Http\Resources\LoginActivityResource;
 use Modules\Profile\app\Http\Resources\UserResource;
 use Modules\Wallet\Services\BridgeService;
 
+use function Symfony\Component\Clock\now;
 
 class ProfileController extends Controller
 {
@@ -332,6 +333,7 @@ public function verifyEnableTwoFa(Request $request)
  */
 public function getLoginActivities(Request $request)
 {
+    Log::info(now());
     $borrower = auth()->guard('borrower')->user();
     $perPage = $request->query('pageSize', 15);
 
