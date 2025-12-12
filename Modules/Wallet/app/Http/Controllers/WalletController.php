@@ -2496,8 +2496,6 @@ class WalletController extends Controller
             ]);
             // $data = $request->validated();
         } catch (\Illuminate\Validation\ValidationException $e) {
-            Log::info("getting here");
-            Log::info($request->all());
             $errors = $e->validator->errors()->all();
             return $this->error($errors[0]);
         }

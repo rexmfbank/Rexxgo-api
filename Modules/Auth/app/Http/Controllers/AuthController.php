@@ -116,10 +116,10 @@ class AuthController extends Controller
 
         app()->instance('tenant.company_id', $companyId);
 
-       
+
         try {
             $request->validate([
-            'customer_type' => 'required|string|in:Individual,Business',
+                'customer_type' => 'required|string|in:Individual,Business',
                 'phone'         => 'required|string|max:15',
                 'email'         => 'required|email|max:50',
                 'first_name'    => 'required|string|max:50',
@@ -656,24 +656,37 @@ class AuthController extends Controller
         $borrower = Auth::guard('borrower')->user();
 
         //check for kyc status
-        if (!empty($borrower->bridge_customer_id) && $borrower->kyc_status != 'active') {
-            $bridgeService = new BridgeService();
-            // $bridgeUser = $bridgeService->getCustomer("97ea8018-669e-418e-a24c-d7fa4393095c");
-            $bridgeUser = $bridgeService->getCustomer($borrower->bridge_customer_id);
-            $kycStatus = $bridgeUser['status'] ?? 'not_started';
-            if ($kycStatus == "approved" || $kycStatus == "active") {
-                $borrower->kyc_status = "active";
-            } elseif ($kycStatus == "not_started") {
-            } elseif ($kycStatus == "under_review") {
-                $borrower->kyc_status = "awaiting_approval";
-            } elseif ($kycStatus == "rejected") {
-                $borrower->kyc_status = "rejected";
-            } else {
-                $borrower->kyc_status = $kycStatus;
+        try {
+
+            if (!empty($borrower->bridge_customer_id) && $borrower->kyc_status != 'active') {
+                $bridgeService = new BridgeService();
+                // $bridgeUser = $bridgeService->getCustomer("97ea8018-669e-418e-a24c-d7fa4393095c");
+                $bridgeUser = $bridgeService->getCustomer($borrower->bridge_customer_id);
+                $kycStatus = $bridgeUser['status'] ?? 'not_started';
+                if ($kycStatus == "approved" || $kycStatus == "active") {
+                    $borrower->kyc_status = "active";
+                } elseif ($kycStatus == "not_started") {
+                } elseif ($kycStatus == "under_review") {
+                    $borrower->kyc_status = "awaiting_approval";
+                } elseif ($kycStatus == "rejected") {
+                    $borrower->kyc_status = "rejected";
+                } else {
+                    $borrower->kyc_status = $kycStatus;
+                }
+                $borrower->rejection_reasons = json_encode($bridgeUser['rejection_reasons'], JSON_PRETTY_PRINT);
+                $borrower->tos_status = $bridgeUser['has_accepted_terms_of_service'] ?? $borrower->tos_status;
+                $borrower->save();
             }
-            $borrower->rejection_reasons = json_encode($bridgeUser['rejection_reasons'], JSON_PRETTY_PRINT);
-            $borrower->tos_status = $bridgeUser['has_accepted_terms_of_service'] ?? $borrower->tos_status;
-            $borrower->save();
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 400);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Server Error: ' . $e->getMessage(),
+            ], 500);
         }
 
 
@@ -715,37 +728,37 @@ class AuthController extends Controller
 
 
     /**
- * @OA\Post(
- *   path="/api/auth/check-email",
- *   tags={"Auth"},
- *   summary="Check if an email already exists",
- *   @OA\RequestBody(
- *     required=true,
- *     @OA\JsonContent(
- *       required={"email"},
- *       @OA\Property(property="email", type="string", example="john@example.com")
- *     )
- *   ),
- *   @OA\Response(response=200, description="Email check response"),
- * )
- */
-public function checkEmail(Request $request)
-{
-    $request->validate([
-        'email' => 'required|email|max:50'
-    ]);
+     * @OA\Post(
+     *   path="/api/auth/check-email",
+     *   tags={"Auth"},
+     *   summary="Check if an email already exists",
+     *   @OA\RequestBody(
+     *     required=true,
+     *     @OA\JsonContent(
+     *       required={"email"},
+     *       @OA\Property(property="email", type="string", example="john@example.com")
+     *     )
+     *   ),
+     *   @OA\Response(response=200, description="Email check response"),
+     * )
+     */
+    public function checkEmail(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email|max:50'
+        ]);
 
-    $exists = Borrower::where('email', $request->email)->first();
+        $exists = Borrower::where('email', $request->email)->first();
 
-    if ($exists) {
-        return $this->error('Email already exists', 409);
+        if ($exists) {
+            return $this->error('Email already exists', 409);
+        }
+
+        return $this->success([
+            "available" => true,
+            "message"   => "Email is available"
+        ]);
     }
-
-    return $this->success([
-        "available" => true,
-        "message"   => "Email is available"
-    ]);
-}
 
 
 
@@ -844,8 +857,8 @@ public function checkEmail(Request $request)
     protected function respondWithToken($token, $message = 'Success')
     {
         $user = Auth::guard('borrower')->user();
-         $user->photo = $user->photo ? url( "storage/". $user->photo) : null;
-        $user->avatar = $user->photo ? url( "storage/". $user->photo) : null;
+        $user->photo = $user->photo ? url("storage/" . $user->photo) : null;
+        $user->avatar = $user->photo ? url("storage/" . $user->photo) : null;
         $data = [
             'access_token' => $token,
             'token_type'   => 'bearer',
@@ -988,7 +1001,7 @@ public function checkEmail(Request $request)
 
         $email =  $borrower->email;
         Mail::to($email)->send(new GenericMail($msg, env("APP_NAME") . " - Your OTP is here..."));
-        
+
         return $this->success([
             'email' => $borrower->email,
             'expires_in' => 300,
@@ -1049,27 +1062,27 @@ public function checkEmail(Request $request)
 
 
 
-private function getUserCountry(): string
-{
-    try {
-        $ip = request()->ip();
-        Log::info(json_encode([$ip]));
+    private function getUserCountry(): string
+    {
+        try {
+            $ip = request()->ip();
+            Log::info(json_encode([$ip]));
 
-        if ($ip === '127.0.0.1') {
-            return 'NG'; // local fallback
+            if ($ip === '127.0.0.1') {
+                return 'NG'; // local fallback
+            }
+
+            $response = Http::timeout(3)->get("http://ipwho.is/{$ip}");
+
+            Log::info(json_encode([$response, $ip]));
+            if ($response->successful() && $response['success'] === true) {
+                return $response['country_code'] ?? 'NG';
+            }
+            return 'NG';
+        } catch (\Throwable $th) {
+            return "NG";
         }
-
-        $response = Http::timeout(3)->get("http://ipwho.is/{$ip}");
-
-        Log::info(json_encode([$response, $ip]));
-        if ($response->successful() && $response['success'] === true) {
-            return $response['country_code'] ?? 'NG';
-        }
-        return 'NG';
-    } catch (\Throwable $th) {
-        return "NG";
     }
-}
 
 
 
