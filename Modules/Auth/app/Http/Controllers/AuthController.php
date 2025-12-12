@@ -1062,7 +1062,7 @@ private function getUserCountry(): string
         if ($response->successful() && $response['success'] === true) {
             return $response['country_code'] ?? 'NG';
         }
-
+        Log::info(json_encode($response));
         return 'NG';
     } catch (\Throwable $th) {
         return "NG";
