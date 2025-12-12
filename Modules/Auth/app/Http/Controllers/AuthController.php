@@ -1059,10 +1059,10 @@ private function getUserCountry(): string
 
         $response = Http::timeout(3)->get("http://ipwho.is/{$ip}");
 
+        Log::info(json_encode($response));
         if ($response->successful() && $response['success'] === true) {
             return $response['country_code'] ?? 'NG';
         }
-        Log::info(json_encode($response));
         return 'NG';
     } catch (\Throwable $th) {
         return "NG";
