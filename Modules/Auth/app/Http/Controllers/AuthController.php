@@ -1053,6 +1053,8 @@ private function getUserCountry(): string
 {
     try {
         $ip = request()->ip();
+        Log::info(json_encode([$ip]));
+
         if ($ip === '127.0.0.1') {
             return 'NG'; // local fallback
         }
