@@ -50,7 +50,8 @@ class ProfileController extends Controller
         }
 
         $borrower = auth()->guard('borrower')->user();
-
+        $user = new UserResource($borrower);
+        Log::info(json_encode($user, JSON_PRETTY_PRINT));
         return $this->success(new UserResource($borrower), 'Profile retrieved successfully');
     }
     /**
@@ -346,7 +347,6 @@ public function getLoginActivities(Request $request)
         'total_items'  => $activities->total(),
         'per_page'     => $activities->perPage(),
     ];
-    Log::info(json_encode($resourceCollection, JSON_PRETTY_PRINT));
     return $this->success([
         'items' => $resourceCollection,
         'meta'  => $meta,
