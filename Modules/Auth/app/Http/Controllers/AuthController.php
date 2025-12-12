@@ -844,8 +844,8 @@ public function checkEmail(Request $request)
     protected function respondWithToken($token, $message = 'Success')
     {
         $user = Auth::guard('borrower')->user();
-         $user->photo = $user->photo ? url($user->photo) : null;
-        $user->avatar = $user->photo ? url($user->photo) : null;
+         $user->photo = $user->photo ? url( "storage/". $user->photo) : null;
+        $user->avatar = $user->photo ? url( "storage/". $user->photo) : null;
         $data = [
             'access_token' => $token,
             'token_type'   => 'bearer',
