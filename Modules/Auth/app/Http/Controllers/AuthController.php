@@ -713,17 +713,17 @@ class AuthController extends Controller
                 'message' => '2FA code sent. Please verify to complete login.'
             ], '2FA required', 200);
         }
-
+        $country = $this->getUserCountry();
         LoginActivity::create([
             'borrower_id' => $borrower->id,
             'email'       => $request->email,
             'ip_address'  => $request->ip(),
             'device'      => $request->userAgent(),
-            "country" => $this->getUserCountry()
+            "country" => $country["country"],
         ]);
 
 
-        return $this->respondWithToken($token, 'Login successful');
+        return $this->respondWithToken($token, 'Login successful', $country['timezone']);
     }
 
 
@@ -809,8 +809,16 @@ class AuthController extends Controller
 
         // Generate JWT token
         $token = Auth::guard('borrower')->login($borrower);
+        $country = $this->getUserCountry();
+        LoginActivity::create([
+            'borrower_id' => $borrower->id,
+            'email'       => $request->email,
+            'ip_address'  => $request->ip(),
+            'device'      => $request->userAgent(),
+            "country" => $country["country"],
+        ]);
 
-        return $this->respondWithToken($token, 'Login successful');
+        return $this->respondWithToken($token, 'Login successful', $country['timezone']);
     }
 
 
@@ -854,9 +862,13 @@ class AuthController extends Controller
     /**
      * Format token response
      */
-    protected function respondWithToken($token, $message = 'Success')
+    protected function respondWithToken($token, $message = 'Success', $timezone = "")
     {
         $user = Auth::guard('borrower')->user();
+        if(!empty($timezone)){
+            $user->timezone = $timezone;
+            $user->save();
+        }
         $user->photo = $user->photo ? url("storage/" . $user->photo) : null;
         $user->avatar = $user->photo ? url("storage/" . $user->photo) : null;
         $data = [
@@ -1062,25 +1074,36 @@ class AuthController extends Controller
 
 
 
-    private function getUserCountry(): string
+    private function getUserCountry(): array
     {
         try {
             $ip = request()->ip();
-            Log::info(json_encode([$ip]));
-
+            $ip = $ip === '::1' || $ip === '127.0.0.1' ? "197.211.59.99" : $ip; // local dev fallback
             if ($ip === '127.0.0.1') {
-                return 'NG'; // local fallback
+                return [
+                    "country" => "NG",
+                    "timezone" => "Africa/Lagos"
+                ];
             }
 
             $response = Http::timeout(3)->get("http://ipwho.is/{$ip}");
 
             Log::info(json_encode([$response, $ip]));
             if ($response->successful() && $response['success'] === true) {
-                return $response['country_code'] ?? 'NG';
+                 return [
+                    "country" => $response['country_code'],
+                    "timezone" => $response['timezone']['id']
+                ];
             }
-            return 'NG';
+            return [
+                    "country" => "NG",
+                    "timezone" => "Africa/Lagos"
+                ];
         } catch (\Throwable $th) {
-            return "NG";
+                        return [
+                    "country" => "NG",
+                    "timezone" => "Africa/Lagos"
+                ];
         }
     }
 
