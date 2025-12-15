@@ -127,7 +127,7 @@ class BridgeWebhookController extends Controller
         $objectId = $event['event_object']['id'] ?? 'N/A';
         $status = $event['event_object']['status'] ?? null;
         Log::info("Bridge Webhook Event Received: Type={$eventType}, Category={$category}, ObjectID={$objectId}, Status={$status}");
-        
+        Log::info(json_encode($event));
         switch ($category) {
             case 'customer':
                 switch ($eventType) {
