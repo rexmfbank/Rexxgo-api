@@ -260,7 +260,6 @@ class BridgeWebhookController extends Controller
             $borrower->tos_status = $tos_status;
             if ($kycStatus == "approved") {
                 $existingTask = UsdWalletQueue::where('borrower_id', $borrower->id)->first();
-
                 if (!$existingTask) {
                     UsdWalletQueue::create([
                         'borrower_id' => $borrower->id,

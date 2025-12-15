@@ -51,8 +51,9 @@ class ProfileController extends Controller
         }
 
         $borrower = auth()->guard('borrower')->user();
+
         $user = new UserResource($borrower);
-        Log::info(json_encode($user, JSON_PRETTY_PRINT));
+
         return $this->success(new UserResource($borrower), 'Profile retrieved successfully');
     }
     /**

@@ -674,7 +674,7 @@ class AuthController extends Controller
                     $borrower->kyc_status = $kycStatus;
                 }
                 $borrower->rejection_reasons = json_encode($bridgeUser['rejection_reasons'], JSON_PRETTY_PRINT);
-                $borrower->tos_status = $bridgeUser['has_accepted_terms_of_service'] ?? $borrower->tos_status;
+                $borrower->tos_status = $bridgeUser['has_accepted_terms_of_service'] ? "approved" : $borrower->tos_status;
                 $borrower->save();
             }
         } catch (\RuntimeException $e) {
