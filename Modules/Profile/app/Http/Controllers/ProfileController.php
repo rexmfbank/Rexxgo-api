@@ -334,7 +334,6 @@ public function verifyEnableTwoFa(Request $request)
  */
 public function getLoginActivities(Request $request)
 {
-    Log::info(json_encode(now()));
     $borrower = auth()->guard('borrower')->user();
     $perPage = $request->query('pageSize', 15);
 

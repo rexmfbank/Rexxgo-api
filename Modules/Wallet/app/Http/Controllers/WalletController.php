@@ -253,7 +253,6 @@ class WalletController extends Controller
 
 
                 $response = $this->rexBank->CreateWallet($data);
-                Log::info($response);
                 if ($response && isset($response['status']) && $response['status'] == 'success') {
                 } else {
                     $isCreateWallet = false;
@@ -1098,7 +1097,6 @@ class WalletController extends Controller
                 // return $this->error($convertedAmount);
 
                 $creditTreasury = $this->rexBank->SendMoneyInternal($treasuryData);
-                Log::info($creditTreasury);
                 if (!$creditTreasury) {
                     return $this->error($response['message'] ?? "Something went wrong");
                 } elseif (!isset($creditTreasury['status']) || $creditTreasury['status'] != 'success') {
@@ -1697,7 +1695,6 @@ class WalletController extends Controller
             ];
 
             $creditTreasury = $this->rexBank->SendMoneyInternal($treasuryData);
-            Log::info($creditTreasury);
             if (!$creditTreasury) {
                 return $this->error($response['message'] ?? "Something went wrong");
             } elseif (!isset($creditTreasury['status']) || $creditTreasury['status'] != 'success') {
@@ -2635,7 +2632,6 @@ class WalletController extends Controller
                 $res = new TransactionResource($newTransaction);
 
                  if(env("APP_ENV") == "local"){
-                    Log::info($destination);
                     $data['event_object_status'] = "payment_processed";
                     $payloadData = [
                         "api_version" => "v0",
@@ -2786,11 +2782,7 @@ class WalletController extends Controller
 
             $data = $request->all();
             $data['borrower_id'] = auth()->guard('borrower')->user()->id;
-            Log::info("querying account number");
-            Log::info($data);
             $response = $this->rexBank->VerifyAccountNumber($data);
-            Log::info("query response");
-            Log::info($response);
             
             if ($response && isset($response['status']) && $response['status'] == 'success') {
                 return $this->success($response['data'], 'Acount verified.');

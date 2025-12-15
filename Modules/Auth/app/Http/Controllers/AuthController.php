@@ -129,8 +129,6 @@ class AuthController extends Controller
             ]);
             // $data = $request->validated();
         } catch (\Illuminate\Validation\ValidationException $e) {
-            Log::info("getting here");
-            Log::info($request->all());
             $errors = $e->validator->errors()->all();
             return $this->error($errors[0]);
         }
@@ -641,7 +639,6 @@ class AuthController extends Controller
             ]);
             // $data = $request->validated();
         } catch (\Illuminate\Validation\ValidationException $e) {
-            Log::info($request->all());
             $errors = $e->validator->errors()->all();
             return $this->error($errors[0]);
         }
@@ -1088,7 +1085,6 @@ class AuthController extends Controller
 
             $response = Http::timeout(3)->get("http://ipwho.is/{$ip}");
 
-            Log::info(json_encode([$response, $ip]));
             if ($response->successful() && $response['success'] === true) {
                  return [
                     "country" => $response['country_code'],
