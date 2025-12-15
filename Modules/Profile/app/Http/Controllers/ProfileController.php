@@ -541,6 +541,30 @@ public function getLoginActivities(Request $request)
         }
 
         $borrower = auth()->guard('borrower')->user();
+        try {
+            if (!empty($borrower->bridge_customer_id) && $borrower->tos_status != 'approved') {
+                $bridgeService = new BridgeService();
+                // $bridgeUser = $bridgeService->getCustomer("97ea8018-669e-418e-a24c-d7fa4393095c");
+                $bridgeUser = $bridgeService->getCustomer($borrower->bridge_customer_id);
+                $kycStatus = $bridgeUser['status'] ?? 'not_started';
+                if ($kycStatus == "approved" || $kycStatus == "active") {
+                    $borrower->kyc_status = "active";
+                } elseif ($kycStatus == "not_started") {
+                } elseif ($kycStatus == "under_review") {
+                    $borrower->kyc_status = "awaiting_approval";
+                } elseif ($kycStatus == "rejected") {
+                    $borrower->kyc_status = "rejected";
+                } else {
+                    $borrower->kyc_status = $kycStatus;
+                }
+                $borrower->rejection_reasons = json_encode($bridgeUser['rejection_reasons'], JSON_PRETTY_PRINT);
+                $borrower->tos_status = $bridgeUser['has_accepted_terms_of_service'] ? "approved" : $borrower->tos_status;
+                $borrower->save();
+            }
+        } catch (\RuntimeException $e) {
+        } catch (\Throwable $e) {
+        }
+        $borrower = Borrower::find(auth()->guard('borrower')->user()->id);
 
         return $this->success([
             'kyc_status' => $borrower->kyc_status,
