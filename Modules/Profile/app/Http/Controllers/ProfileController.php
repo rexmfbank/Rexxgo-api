@@ -682,7 +682,6 @@ public function getLoginActivities(Request $request)
             'last_name',
             'email',
             'phone',
-            'dob',
             'address',
         ];
 
@@ -692,20 +691,16 @@ public function getLoginActivities(Request $request)
                 $completedFields++;
             }
         }
-        $requiredFields = [...$requiredFields, 'tos_status'];
-        $requiredFields = [...$requiredFields, 'kyc_status'];
 
+        $profileCompletion = 25;
         if($borrower->tos_status === 'approved'){
-            $completedFields++;
+            $profileCompletion += 25;
         }
         if($borrower->kyc_status === 'active'){
-            $completedFields++;
+            $profileCompletion += 25;
         }
         
         $usdWallet = Savings::where('borrower_id', $borrower->id)->where('currency', SavingsProduct::$usd)->first(); //if usd wallet is created, that means wallets has bee n created
-
-        $profileCompletion = round(($completedFields / count($requiredFields)) * 100);
-
         if($usdWallet){
             if(!empty($usdWallet->account_number)){
                 $profileCompletion += 25;
