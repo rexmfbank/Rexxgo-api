@@ -1174,29 +1174,35 @@ class WalletController extends Controller
                 $convertedAmount = $amount * $rate->rate;
 
                 if ($convertedAmount < 0.9) {
-                    return response()->json(['error' => $convertedAmount . ' ' . $destinationWallet->currency . ' cannot be transferred. Minimum is 1' . $destinationWallet->currency], 404);
+
+                    return $this->error($convertedAmount . ' ' . $destinationWallet->currency . ' cannot be transferred. Minimum is 1' . $destinationWallet->currency);
                 }
                 $ngnTreasury = Treasury::where('currency', 'NGN')->first();
                 if (!$ngnTreasury) {
-                    return response()->json(['error' => 'An error occured'], 404);
+                                        return $this->error('An error occured');
+
                 }
 
                 $treasuryWallet = Savings::where("id", $ngnTreasury->savings_id)->first();
                 if (!$treasuryWallet) {
-                    return response()->json(['error' => 'An error occured'], 404);
+                                        return $this->error('An error occured');
+
                 }
 
                 $usdcTreasury = Treasury::where('currency', 'USDC')->first();
                 if (!$usdcTreasury) {
-                    return response()->json(['error' => 'An error occured'], 404);
+                                        return $this->error('An error occured');
+
                 }
 
                 $treasuryWalletUSDC = Savings::where("id", $usdcTreasury->savings_id)->first();
                 if (!$treasuryWalletUSDC) {
-                    return response()->json(['error' => 'An error occured'], 404);
+                                        return $this->error('An error occured');
+
                 }
                 if ($treasuryWalletUSDC->available_balance < $convertedAmount) {
-                    return response()->json(['error' => 'An error occured'], 404);
+                                        return $this->error('An error occured');
+
                 }
                 $treasuryData = [
                     "from_account_number" => $sourceWallet->account_number,
