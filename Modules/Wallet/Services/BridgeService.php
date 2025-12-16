@@ -403,8 +403,6 @@ class BridgeService
 
         $url = "{$baseUrl}/v0/customers/{$customerId}";
 
-        Log::info("Bridge Get Customer Request URL: {$url}");
-
         $response = Http::withHeaders([
             'Api-Key' => $apiKey
         ])->get($url);

@@ -1403,38 +1403,38 @@ class WalletController extends Controller
                 $convertedAmount = $amount * $rate->rate;
 
                 if ($convertedAmount < 1500) {
-                    return response()->json(['error' => $convertedAmount . ' ' . $destinationWallet->currency . ' cannot be transferred. Minimum is 1' . $destinationWallet->currency], 404);
+                    return $this->error($convertedAmount . ' ' . $destinationWallet->currency . ' cannot be transferred. Minimum is 1' . $destinationWallet->currency);
                 }
                 if (empty($destinationWallet->account_number)) {
-                    return response()->json(['error' => 'Invalid destination wallet'], 404);
+                    return $this->error('Invalid destination wallet');
                 }
 
                 $usdTreasury = Treasury::where('currency', 'USD')->first();
                 if (!$usdTreasury) {
-                    return response()->json(['error' => 'An error occured'], 404);
+                    return $this->error('An error occured');
                 }
 
                 $treasuryWalletUSD = Savings::where("id", $usdTreasury->savings_id)->first();
                 if (!$treasuryWalletUSD) {
-                    return response()->json(['error' => 'An error occured'], 404);
+                    return $this->error('An error occured');
                 }
                 if ($treasuryWalletUSD->available_balance < $amount) {
-                    return response()->json(['error' => 'An error occured'], 404);
+                    return $this->error('An error occured');
                 }
 
 
                 $ngnTreasury = Treasury::where('currency', 'NGN')->first();
                 if (!$ngnTreasury) {
-                    return response()->json(['error' => 'An error occured'], 404);
+                    return $this->error('An error occured');
                 }
 
                 $treasuryWalletNGN = Savings::where("id", $ngnTreasury->savings_id)->first();
                 if (!$treasuryWalletNGN) {
-                    return response()->json(['error' => 'An error occured'], 404);
+                    return $this->error('An error occured');
                 }
 
                 if ($treasuryWalletNGN->available_balance < $convertedAmount) {
-                    return response()->json(['error' => 'An error occured'], 404);
+                    return $this->error('An error occured');
                 }
 
                 $destination = [
