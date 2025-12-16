@@ -11,7 +11,7 @@ class TransactionResource extends JsonResource
         $borrower = auth()->guard('borrower')->user();
         $timezone = $borrower->timezone ?? config('app.timezone');
 
-        $createdAt = $this->created_at
+        $createdAt = $this->currency == 'NGN' ?  $this->created_at: $this->created_at
             ->copy()
             ->timezone($timezone);
 
