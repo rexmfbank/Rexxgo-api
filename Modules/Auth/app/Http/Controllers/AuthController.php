@@ -765,6 +765,40 @@ class AuthController extends Controller
     }
 
 
+    /**
+     * @OA\Post(
+     *   path="/api/auth/check-phone",
+     *   tags={"Auth"},
+     *   summary="Check if phone already exists",
+     *   @OA\RequestBody(
+     *     required=true,
+     *     @OA\JsonContent(
+     *       required={"phone"},
+     *       @OA\Property(property="phone", type="string", example="0811111111")
+     *     )
+     *   ),
+     *   @OA\Response(response=200, description="PHone check response"),
+     * )
+     */
+    public function checkPhone(Request $request)
+    {
+        $request->validate([
+            'phone' => 'required|max:50'
+        ]);
+
+        $exists = Borrower::where('phone', $request->phone)->first();
+
+        if ($exists) {
+            return $this->error('Phone number already exists', 409);
+        }
+
+        return $this->success([
+            "available" => true,
+            "message"   => "Phone number is available"
+        ]);
+    }
+
+
 
     /**
      * @OA\Post(

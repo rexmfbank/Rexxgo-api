@@ -20,6 +20,7 @@ Route::prefix('auth')
         Route::post('setpin', [AuthController::class, 'setPin']);
         Route::post('login', [AuthController::class, 'login']);
         Route::post('check-email', [AuthController::class, 'checkEmail']);
+        Route::post('check-phone', [AuthController::class, 'checkPhone']);
         
         Route::post('verify-2fa', [AuthController::class, 'verifyTwoFa']);
         

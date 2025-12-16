@@ -489,6 +489,39 @@
                 }
             }
         },
+        "/api/auth/check-phone": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Check if phone already exists",
+                "operationId": "7fdb6ca9168bf894ee138c0527df4afb",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "phone"
+                                ],
+                                "properties": {
+                                    "phone": {
+                                        "type": "string",
+                                        "example": "0811111111"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "PHone check response"
+                    }
+                }
+            }
+        },
         "/api/auth/verify-2fa": {
             "post": {
                 "tags": [
