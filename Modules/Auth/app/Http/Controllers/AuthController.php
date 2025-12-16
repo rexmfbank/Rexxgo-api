@@ -600,7 +600,7 @@ class AuthController extends Controller
              ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             $errors = $e->validator->errors()->all();
-            return $this->error($errors[0]);
+            return $this->error("Incorrect or invalid Email address");
         }
 
         
