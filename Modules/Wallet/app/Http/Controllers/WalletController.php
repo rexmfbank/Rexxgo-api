@@ -154,7 +154,7 @@ class WalletController extends Controller
         $borrowerId = auth()->guard('borrower')->user()->id;
         $perPage = $request->query('pageSize', 15);
         $transactions = SavingsTransaction::with("savings")->where("borrower_id", $borrowerId)
-            ->orderBy('created_at', 'desc')
+            ->orderBy('id', 'desc')
             ->paginate($perPage);
         $paginatedResource = TransactionResource::collection($transactions);
 
