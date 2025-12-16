@@ -253,6 +253,7 @@ class WalletController extends Controller
 
 
                 $response = $this->rexBank->CreateWallet($data);
+                Log::info($response);
                 if ($response && isset($response['status']) && $response['status'] == 'success') {
                 } else {
                     $isCreateWallet = false;
