@@ -593,10 +593,17 @@ class AuthController extends Controller
      */
     public function getEmail(Request $request)
     {
-        $request->validate([
-            'email' => 'required|email|exists:borrowers,email',
-        ]);
+        
+        try {
+            $data = $request->validate([
+                 'email' => 'required|email|exists:borrowers,email',
+             ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $errors = $e->validator->errors()->all();
+            return $this->error($errors[0]);
+        }
 
+        
         $borrower = \App\Models\Borrower::where('email', $request->email)->first();
 
         if (!$borrower) {
