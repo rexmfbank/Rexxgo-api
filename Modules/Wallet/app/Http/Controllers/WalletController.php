@@ -248,7 +248,7 @@ class WalletController extends Controller
                 $errorMessage .= "NGN Wallet already exists. ";
             } else {
                 $data = [
-                    "borrower_id"   => 3521 //$borrower->id
+                    "borrower_id"   => $borrower->id
                 ];
 
 
