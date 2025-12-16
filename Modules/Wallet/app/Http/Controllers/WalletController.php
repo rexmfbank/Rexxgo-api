@@ -259,7 +259,7 @@ class WalletController extends Controller
                     $isCreateWallet = false;
                     $errorMessage .= $response['responseMessage'] ?? 'NGN Wallet creation failed. ';
                 }
-            }
+            } 
 
             //create usd wallet
             $savingsProduct = DB::table('savings_products')->where("product_name", SavingsProduct::$usd)->first();
