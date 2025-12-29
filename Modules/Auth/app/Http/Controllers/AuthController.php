@@ -789,7 +789,7 @@ class AuthController extends Controller
         // $exists = Borrower::where('phone', $request->phone)->first();
         $phone = $request->phone;
 
-        $normalizedPhone = ltrim($phone, '0');
+        $normalizedPhone = "0".$phone;
 
         $exists = Borrower::where(function ($q) use ($phone, $normalizedPhone) {
             $q->where('phone', $phone)
