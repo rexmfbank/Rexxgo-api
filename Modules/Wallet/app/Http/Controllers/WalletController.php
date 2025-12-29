@@ -1854,25 +1854,25 @@ class WalletController extends Controller
                 );
             }
             SavingsTransaction::create([
-            'reference' => $reference,
-            'borrower_id' => $borrower->id,
-            'savings_id' => $wallet->id,
-            'transaction_amount' => $amountToSend,
-            'balance' => $wallet->available_balance,
-            'transaction_date' => now()->toDateString(),
-            'transaction_time' => now()->toTimeString(),
-            'transaction_type' => 'debit',
-            'transaction_description' => 'You transfered USD' . $amountToSend . ' to ' . $beneficiary['account_owner_name'] . '.',
-            'debit' => $amountToSend,
-            'credit' => 0,
-            'category' => 'fund_sent',
-            'status_id' => env("APP_ENV") == "local" ? 'successful' : "pending",
-            'currency' => $wallet->currency ?? 'USD',
-            'external_response' => json_encode($transferResponse, JSON_PRETTY_PRINT),
-            'external_tx_id' => $transferId . '_init',
-            
-            'provider' => 'bridge',
-        ]);
+                'reference' => $reference,
+                'borrower_id' => $borrower->id,
+                'savings_id' => $wallet->id,
+                'transaction_amount' => $amountToSend,
+                'balance' => $wallet->available_balance,
+                'transaction_date' => now()->toDateString(),
+                'transaction_time' => now()->toTimeString(),
+                'transaction_type' => 'debit',
+                'transaction_description' => 'You transfered USD' . $amountToSend . ' to ' . $beneficiary['account_owner_name'] . '.',
+                'debit' => $amountToSend,
+                'credit' => 0,
+                'category' => 'fund_sent',
+                'status_id' => env("APP_ENV") == "local" ? 'successful' : "pending",
+                'currency' => $wallet->currency ?? 'USD',
+                'external_response' => json_encode($transferResponse, JSON_PRETTY_PRINT),
+                'external_tx_id' => $transferId . '_init',
+                
+                'provider' => 'bridge',
+            ]);
             Mail::to($borrower->email)->send(new GenericMail($notificationMessage, env("APP_NAME") . ' - DEBIT ALERT'));
 
             return $this->success($transferResponse, "Transfer successful");

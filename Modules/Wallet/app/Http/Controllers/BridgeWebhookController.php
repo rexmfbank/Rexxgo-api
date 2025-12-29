@@ -476,7 +476,7 @@ class BridgeWebhookController extends Controller
         $currency = strtoupper($object['currency'] ?? 'USD');
         $fromWallet = $object['source']['bridge_wallet_id'] ?? null;
         $toAddress = $object['destination']['to_address'] ?? null;
-        Log::info($toAddress);
+
         $paymentRail = $object['destination']['payment_rail'] ?? null;
         $txHash = $object['receipt']['destination_tx_hash'] ?? null;
         $receiptUrl = $object['receipt']['url'] ?? null;

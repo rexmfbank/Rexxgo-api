@@ -786,7 +786,16 @@ class AuthController extends Controller
             'phone' => 'required|max:50'
         ]);
 
-        $exists = Borrower::where('phone', $request->phone)->first();
+        // $exists = Borrower::where('phone', $request->phone)->first();
+        $phone = $request->phone;
+
+        $normalizedPhone = ltrim($phone, '0');
+
+        $exists = Borrower::where(function ($q) use ($phone, $normalizedPhone) {
+            $q->where('phone', $phone)
+            ->orWhere('phone', $normalizedPhone);
+        })->first();
+
 
         if ($exists) {
             return $this->error('Phone number already exists', 409);
