@@ -2903,6 +2903,140 @@ class WalletController extends Controller
         ], "Rates");
     }
 
+
+        /**
+     * @OA\Get(
+     *     path="/api/wallets/rates/all",
+     *     summary="Get currency exchange rates",
+     *     description="Fetch exchange rates for a given base currency from the rates table.",
+     *     tags={"Wallet"},
+     *
+     *     @OA\Response(
+     *         response=200,
+     *         description="Successful response with rates",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="base", type="string", example="USD"),
+     *             @OA\Property(
+     *                 property="rates",
+     *                 type="object",
+     *                 additionalProperties=@OA\Property(type="number", example=1.25)
+     *             )
+     *         )
+     *     ),
+     *
+     *     @OA\Response(
+     *         response=404,
+     *         description="No rates found for the given base currency",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="message", type="string", example="No rates for USD")
+     *         )
+     *     )
+     * )
+     */
+    public function AllRates(Request $request)
+    {
+        $rates = Rate::all();
+        
+
+        return $this->success(
+            $rates
+        , "Rates");
+    }
+
+
+    /**
+     * @OA\Get(
+     *     path="/api/wallets/rates/fx",
+     *     summary="Get currency exchange rates",
+     *     description="Fetch exchange rates for a given base currency from the rates table.",
+     *     tags={"Wallet"},
+     *     @OA\Parameter(
+     *         name="base",
+     *         in="query",
+     *         description="Base currency code (e.g., USD, NGN). Defaults to USD.",
+     *         required=false,
+     *         @OA\Schema(type="string", example="USD")
+     *     ),
+     * 
+     *     @OA\Response(
+     *         response=200,
+     *         description="Successful response with rates",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="base", type="string", example="USD"),
+     *             @OA\Property(
+     *                 property="rates",
+     *                 type="object",
+     *                 additionalProperties=@OA\Property(type="number", example=1.25)
+     *             )
+     *         )
+     *     ),
+     *
+     *     @OA\Response(
+     *         response=404,
+     *         description="No rates found for the given base currency",
+     *         @OA\JsonContent(
+     *             type="object",
+     *             @OA\Property(property="message", type="string", example="No rates for USD")
+     *         )
+     *     )
+     * )
+     */
+    public function updateRates(Request $request)
+    {
+        $baseCurrency = $request->query('base', 'USD'); // default USD
+        $url = "https://open.er-api.com/v6/latest/{$baseCurrency}";
+
+        try {
+            $response = Http::get($url);
+
+            if ($response->failed()) {
+                Log::error('Currency API request failed', ['response' => $response->body()]);
+                return response()->json(['status' => 'error', 'message' => 'Failed to fetch currency rates'], 500);
+            }
+
+            $data = $response->json();
+            $rates = $data['rates'] ?? [];
+            // return $this->success($rates);
+            foreach ($rates as $target => $rate) {
+                if($baseCurrency == "USD"){
+                    if($target == "NGN"){
+                        Rate::updateOrCreate(
+                            ['base_currency' => "USD", 'target_currency' => $target],
+                            ['rate' => (float) $rate, 'updated_at' => now(), 'created_at' => now()]
+                        );
+
+                        Rate::updateOrCreate(
+                            ['base_currency' => "USDC", 'target_currency' => $target],
+                            ['rate' => (float) $rate, 'updated_at' => now(), 'created_at' => now()]
+                        );
+                    }
+                }elseif($baseCurrency == "NGN"){
+                    if($target == "USD"){
+                        Rate::updateOrCreate(
+                            ['base_currency' => "NGN", 'target_currency' => $target],
+                            ['rate' => (float) $rate, 'updated_at' => now(), 'created_at' => now()]
+                        );
+
+                        Rate::updateOrCreate(
+                            ['base_currency' => "NGN", 'target_currency' => "USDC"],
+                            ['rate' => (float) $rate, 'updated_at' => now(), 'created_at' => now()]
+                        );
+                    }
+                }
+               
+            }
+
+            return response()->json(['status' => 'success', 'message' => 'Rates updated successfully']);
+        } catch (\Exception $e) {
+            Log::error('Currency API error', ['error' => $e->getMessage()]);
+            return response()->json(['status' => 'error', 'message' => 'Error updating rates'], 500);
+        }
+    }
+
+
     /**
      * Create a savings account for a specific product
      */
