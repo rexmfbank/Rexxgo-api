@@ -560,6 +560,37 @@ public function getLoginActivities(Request $request)
                 $borrower->rejection_reasons = json_encode($bridgeUser['rejection_reasons'], JSON_PRETTY_PRINT);
                 $borrower->tos_status = $bridgeUser['has_accepted_terms_of_service'] ? "approved" : $borrower->tos_status;
                 $borrower->save();
+            }else{
+                if(empty($borrower->bridge_customer_id)){
+                    $kycData = [
+                        'full_name' => $borrower->first_name . ' ' . $borrower->last_name,
+                        'email' => $borrower->email,
+                        'type' => 'individual',
+                    ];
+
+                    $response = $this->bridgeService->createKycLink($kycData);
+
+                    if (!$response) {
+                        return $this->error('KYC service is currently unavailable', 500);
+                    }
+                    $updateData = [];
+
+                    $customerId = $response['customer_id'];
+                    $kyc_link = $response['kyc_link'];
+                    $tos_link = $response['tos_link'];
+                    $kyc_status = $response['kyc_status'];
+                    $rejection_reasons = $response['rejection_reasons'];
+                    $tos_status = $response['tos_status'];
+                    $updateData['bridge_customer_id'] = $customerId;
+                    $updateData['kyc_link'] = $kyc_link;
+                    $updateData['tos_link'] = $tos_link;
+                    $updateData['tos_status'] = $tos_status;
+                    $updateData['rejection_reasons'] = json_encode($rejection_reasons, JSON_PRETTY_PRINT);
+                    $updateData['kyc_status'] = $kyc_status == "not_started" ? "pending" : ($kyc_status == "approved" ? "active" : "pending");
+
+                    DB::table('borrowers')->where('id', $borrower->id)->update($updateData);
+                }
+                 
             }
         } catch (\RuntimeException $e) {
         } catch (\Throwable $e) {
