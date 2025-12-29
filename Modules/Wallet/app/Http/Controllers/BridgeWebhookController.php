@@ -3,6 +3,7 @@
 namespace Modules\Wallet\app\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Mail\GenericMail;
 use App\Models\Borrower;
 use App\Models\Savings;
 use App\Models\SavingsTransaction;
@@ -10,6 +11,7 @@ use App\Models\UsdWalletQueue;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Modules\Notification\app\Http\Controllers\NotificationController;
 use Modules\Notification\Services\FirebaseService;
 use Modules\Wallet\Services\RexMfbService;
@@ -502,11 +504,16 @@ class BridgeWebhookController extends Controller
         }else{
             $wallet = Savings::where('account_number', $toAddress)->orWhere('destination_address', $toAddress)->first();
         }
-        Log::info($wallet);
-        Log::info("wallet");
+        $processWallet = true;
         if (!$wallet) {
+            if($isTransactionInitiatedHere){
+                $wallet = Savings::where('id', $isTransactionInitiatedHere->savings_id)->first();
+                $processWallet = false;
+            }
             
-            return;
+            if(!$wallet) {
+                return;
+            }
         }
         $borrower = Borrower::where('id', $wallet->borrower_id)->first();
         
@@ -527,22 +534,21 @@ class BridgeWebhookController extends Controller
         if ($status == 'successful') {
             Log::info("transaction issuccesful");
             $finalWalletBalance += $amount;
-            $wallet->increment('available_balance', $amount);
-            $wallet->increment('ledger_balance', $amount);
+            if($processWallet){
+                $wallet->increment('available_balance', $amount);
+                $wallet->increment('ledger_balance', $amount);
+            }
 
             if($isTransactionInitiatedHere){
                 $isTransactionInitiatedHere->status_id = $status;
                 if(!empty($isTransactionInitiatedHere->treasury_transfer_details)){
-                    Log::info("treasury is not empty");
                     $rexPayload = json_decode($isTransactionInitiatedHere->treasury_transfer_details, true);
-                    Log::info($rexPayload);
                     if(isset($rexPayload['type']) && $rexPayload['type'] == "NGN"){
                         unset($rexPayload['type']);
                         $creditTreasury = $this->rexBank->TransferFromTreasury($rexPayload);
                     }else {
                         $creditTreasury = $this->rexBank->SendMoneyInternal($rexPayload);
                     }
-                    Log::info($creditTreasury);
                     if (!$creditTreasury) {
                         //trigger notification to admin
                     } elseif (!isset($creditTreasury['status']) || $creditTreasury['status'] != 'success') {
@@ -552,6 +558,20 @@ class BridgeWebhookController extends Controller
                     }
                 }
                 $isTransactionInitiatedHere->save();
+                if(str_contains($isTransactionInitiatedHere->transaction_description, "You transfered USD ")) {
+                    // your logic
+                    $msg  = "Hello {$borrower->first_name},\n\n";
+                    $msg .= "Your transfer of \${$amount} USD has been successfully initiated and is now processing via ACH.\n\n";
+                    $msg .= "Transfer Reference:\n{$isTransactionInitiatedHere->reference}\n\n";
+                    $msg .= "Processing Time:\nACH transfers typically take 1–3 business days to complete. ";
+                    $msg .= "Your funds will be credited once the transfer has fully settled.\n\n";
+                    $msg .= "Transfer Date:\n" . now()->toDateTimeString() . " UTC\n\n";
+                    $msg .= "No action is required from you at this time.\n\n";
+                    $msg .= "If there are any issues with the transfer, we’ll notify you immediately.\n\n";
+
+                    Mail::to($borrower->email)->send(new GenericMail($msg, env("APP_NAME") . ' - ACH Transfer Processing'));
+                }
+
             }else {
                     Log::info("transaction is not initiated from rexxgo");
             }
@@ -572,28 +592,30 @@ class BridgeWebhookController extends Controller
         if($isTransactionInitiatedHere){
             $category = "fund_converted";
         }
-        $transaction = SavingsTransaction::updateOrCreate(
-            ['external_tx_id' => $externalReference],
-            [
-                "reference" => $reference,
-                "borrower_id" => $borrower->id,
-                "savings_id" => $wallet->id,
-                "transaction_amount" => $amount,
-                "balance" => $finalWalletBalance,
-                "transaction_date" => $dateOnly,
-                "transaction_time" => $timeOnly,
-                "transaction_type" => "credit",
-                "transaction_description" => "",
-                "credit" => $amount,
-                "status_id" => $status,
-                "currency" => $wallet->currency,
-                "external_response" => json_encode($event, JSON_PRETTY_PRINT),
-                "external_tx_id" => $externalReference,
-                "provider" => "bridge",
-                "category" => $category,
-                "details" => json_encode($details, JSON_PRETTY_PRINT)
-            ]
-        );
+        if($processWallet){
+            $transaction = SavingsTransaction::updateOrCreate(
+                ['external_tx_id' => $externalReference],
+                [
+                    "reference" => $reference,
+                    "borrower_id" => $borrower->id,
+                    "savings_id" => $wallet->id,
+                    "transaction_amount" => $amount,
+                    "balance" => $finalWalletBalance,
+                    "transaction_date" => $dateOnly,
+                    "transaction_time" => $timeOnly,
+                    "transaction_type" => "credit",
+                    "transaction_description" => "",
+                    "credit" => $amount,
+                    "status_id" => $status,
+                    "currency" => $wallet->currency,
+                    "external_response" => json_encode($event, JSON_PRETTY_PRINT),
+                    "external_tx_id" => $externalReference,
+                    "provider" => "bridge",
+                    "category" => $category,
+                    "details" => json_encode($details, JSON_PRETTY_PRINT)
+                ]
+            );
+        }
 
          if ($status === 'successful') {
              $notificationMessage = 'Your ' .$wallet->currency. ' wallet just received '. $amount ;

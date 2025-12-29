@@ -1862,7 +1862,7 @@ class WalletController extends Controller
                 'transaction_date' => now()->toDateString(),
                 'transaction_time' => now()->toTimeString(),
                 'transaction_type' => 'debit',
-                'transaction_description' => 'You transfered USD' . $amountToSend . ' to ' . $beneficiary['account_owner_name'] . '.',
+                'transaction_description' => 'You transfered USD ' . $amountToSend . ' to ' . $beneficiary['account_owner_name'] . '.',
                 'debit' => $amountToSend,
                 'credit' => 0,
                 'category' => 'fund_sent',
@@ -2074,7 +2074,7 @@ class WalletController extends Controller
                 $wallet->decrement('ledger_balance', $amount);
             }
             
-            $notificationMessage = 'You transfered USD' . $amountToSend . ' to ' . substr($data['destination_address'], -5);
+            $notificationMessage = 'You transfered USDC' . $amountToSend . ' to ' . substr($data['destination_address'], -5);
             $notificationController = new NotificationController();
             $notificationRequest = [
                 'type' => 'transaction',
