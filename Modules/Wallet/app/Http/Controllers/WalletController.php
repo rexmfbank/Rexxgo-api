@@ -1294,7 +1294,7 @@ class WalletController extends Controller
 
                 $convertedAmount = $amount * $rate->rate;
 
-                if ($convertedAmount < 1500) {
+                if ($convertedAmount < $rate->rate) {
                     return $this->error($convertedAmount . ' ' . $destinationWallet->currency . ' cannot be transferred. Minimum is 1' . $destinationWallet->currency);
                 }
 
@@ -1409,7 +1409,7 @@ class WalletController extends Controller
 
                 $convertedAmount = $amount * $rate->rate;
 
-                if ($convertedAmount < 1500) {
+                if ($convertedAmount < $rate->rate) {
                     return $this->error($convertedAmount . ' ' . $destinationWallet->currency . ' cannot be transferred. Minimum is 1' . $destinationWallet->currency);
                 }
                 if (empty($destinationWallet->account_number)) {
