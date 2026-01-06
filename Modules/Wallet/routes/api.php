@@ -20,6 +20,7 @@ Route::middleware(['auth:borrower'])->group(function () {
         Route::get('/transactions', [WalletController::class, 'Transactions'])->name('wallet.transactions');
         Route::get('/banks', [WalletController::class, 'GetBanks'])->name('wallet.GetBanks');
         Route::post('/verify-account', [WalletController::class, 'VerifyAccountNumber'])->name('wallet.VerifyAccountNumber');
+        Route::post('/verify-routing-number', [WalletController::class, 'VerifyRoutingNumber'])->name('wallet.VerifyRoutingNumber');
         Route::get('/{accountNumber}/balance', [WalletController::class, 'getWalletbalance'])->name('wallet.balance');
         Route::middleware(['kyc'])->group(function () {
             Route::post('/', [WalletController::class, 'createWallets'])->name('wallet.create');

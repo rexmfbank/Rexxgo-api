@@ -27,7 +27,10 @@ use Modules\Wallet\app\Http\Resources\WalletResource;
 use Modules\Wallet\app\Http\Resources\TransactionResource;
 use Modules\Wallet\Services\BridgeService;
 use Modules\Wallet\Services\RexMfbService;
+use Stripe\Stripe;
+use Stripe\Token;
 
+Stripe::setApiKey(env('STRIPE_SECRET'));
 class WalletController extends Controller
 {
 
@@ -2807,6 +2810,54 @@ class WalletController extends Controller
                 'message' => 'Server Error: ' . $e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/api/wallets/verify-routing-number",
+     *     tags={"Wallet"},
+     *     summary="Verify routing number",
+     *     security={{"bearerAuth":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"account_number", "routing_number"},
+     *             @OA\Property(property="account_number", type="string", example=111111111),
+     *             @OA\Property(property="routing_number", type="string", example=111111111)
+     *         )
+     *     ),
+     *     @OA\Response(response=200, description="success"),
+     *     @OA\Response(response=400, description="Bad request"),
+     *     @OA\Response(response=401, description="Unauthorized"),
+     * )
+     */
+    public function VerifyRoutingNumber(Request $request)
+    {
+        $request->validate([
+            'account_number' => 'required',
+            'routing_number' => 'required',
+        ]);
+
+    try {
+        $token = Token::create([
+            'bank_account' => [
+                'country' => 'US',
+                'currency' => 'usd',
+                'routing_number' => $request->routing_number,
+                'account_number' => $request->account_number,
+            ],
+        ]);
+        return $this->success([
+            'success' => true,
+            'bank_name' => $token->bank_account->bank_name,
+            'routing_number' => $token->bank_account->routing_number,
+            'last4' => $token->bank_account->last4,
+        ], "request successfull");
+
+    } catch (\Stripe\Exception\ApiErrorException $e) {
+        return $this->error($e->getMessage());
+    }
+        
     }
 
 

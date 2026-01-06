@@ -2194,6 +2194,55 @@
                 ]
             }
         },
+        "/api/wallets/verify-routing-number": {
+            "post": {
+                "tags": [
+                    "Wallet"
+                ],
+                "summary": "Verify routing number",
+                "operationId": "3b8c1f9731ec45f03bd1e7320a4d9b13",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "account_number",
+                                    "routing_number"
+                                ],
+                                "properties": {
+                                    "account_number": {
+                                        "type": "string",
+                                        "example": 111111111
+                                    },
+                                    "routing_number": {
+                                        "type": "string",
+                                        "example": 111111111
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "success"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/wallets/banks": {
             "get": {
                 "tags": [
