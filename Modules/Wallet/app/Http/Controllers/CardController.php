@@ -85,12 +85,7 @@ class CardController extends Controller
                     'created_at' => $card->created_at->toDateTimeString(),
                 ];
             });
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Cards retrieved successfully',
-            'data' => $cards
-        ]);
+            return $this->success($cards);
     }
 
 
