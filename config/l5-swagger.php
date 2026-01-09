@@ -22,6 +22,7 @@ return [
                     base_path('app/Swagger/OpenApi.php'),
                     base_path('Modules/Auth/app/Http/Controllers/AuthController.php'),
                     base_path('Modules/Wallet/app/Http/Controllers/WalletController.php'),
+                    base_path('Modules/Wallet/app/Http/Controllers/CardController.php'),
                     base_path('Modules/Profile/app/Http/Controllers/ProfileController.php'),
                     base_path('Modules/Notification/app/Http/Controllers/NotificationController.php'),
                     base_path('Modules/Treasury/app/Http/Controllers/TreasuryController.php'),

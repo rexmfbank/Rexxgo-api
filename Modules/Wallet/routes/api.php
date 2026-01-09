@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Modules\Wallet\app\Http\Controllers\BridgeWebhookController;
 use Modules\Wallet\app\Http\Controllers\WalletController;
+use Modules\Wallet\app\Http\Controllers\CardController;
 
 /*
 |--------------------------------------------------------------------------
@@ -38,8 +39,14 @@ Route::middleware(['auth:borrower'])->group(function () {
             
             
             Route::get('/beneficiaries', [WalletController::class, 'getBeneficiariesByCurrency'])->name('wallet.getBeneficiariesByCurrency');
-            
         });
+    });
+    Route::prefix('cards')->group(function () {
+        Route::get('/', [CardController::class, 'getUserCards'])->name('Cards.getCards');
+        Route::post('/new/init', [CardController::class, 'createSetupIntent'])->name('Cards.createSetupIntent');
+        Route::post('/save', [CardController::class, 'store'])->name('Cards.store');
+        Route::post('/charge-card', [CardController::class, 'chargeCard'])->name('Cards.chargeCard');
+        Route::delete('/{card_id}', [CardController::class, 'removeCard'])->name('Cards.removeCard');
     });
 });
 

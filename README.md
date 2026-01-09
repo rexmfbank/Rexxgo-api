@@ -82,4 +82,6 @@ php artisan migrate --path=database/migrations/2025_11_19_153529_add_two_fa_to_b
 php artisan migrate --path=database/migrations/2025_12_08_100017_addcurrency_pair.php
 php artisan migrate --path=database/migrations/2025_12_08_115140_addoginactivities.php
 php artisan migrate --path=database/migrations/2025_12_14_215418_add_timezone_to_borrower.php
+php artisan migrate --path=database/migrations/2026_01_09_004849_add_stripe_to_borrowers_table.php
+php artisan migrate --path=database/migrations/2026_01_09_011921_create_cards_table.php
 RCP_513uain9bva28q6

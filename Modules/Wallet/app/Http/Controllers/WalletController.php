@@ -2847,6 +2847,7 @@ class WalletController extends Controller
                 'account_number' => $request->account_number,
             ],
         ]);
+         return $this->success($token);
         return $this->success([
             'success' => true,
             'bank_name' => $token->bank_account->bank_name,

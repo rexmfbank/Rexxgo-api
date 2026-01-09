@@ -1435,6 +1435,249 @@
                 ]
             }
         },
+        "/api/cards": {
+            "get": {
+                "tags": [
+                    "Cards"
+                ],
+                "summary": "Get user's saved cards",
+                "description": "Returns all saved debit/credit cards for the authenticated user",
+                "operationId": "ad11c65c0774549b6f44815ee1e18350",
+                "responses": {
+                    "200": {
+                        "description": "Cards retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Cards retrieved"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "integer",
+                                                        "example": 1
+                                                    },
+                                                    "brand": {
+                                                        "type": "string",
+                                                        "example": "visa"
+                                                    },
+                                                    "last4": {
+                                                        "type": "string",
+                                                        "example": "4242"
+                                                    },
+                                                    "exp_month": {
+                                                        "type": "integer",
+                                                        "example": 12
+                                                    },
+                                                    "exp_year": {
+                                                        "type": "integer",
+                                                        "example": 2028
+                                                    },
+                                                    "payment_method_id": {
+                                                        "type": "string",
+                                                        "example": "pm_1Sma3LJPyplrmPSHxyz"
+                                                    },
+                                                    "created_at": {
+                                                        "type": "string",
+                                                        "example": "2025-01-09 14:22:11"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/cards/new/init": {
+            "post": {
+                "tags": [
+                    "Cards"
+                ],
+                "summary": "Create add card intent",
+                "operationId": "2f05436067cb4f3e07557bd6b2d89c67",
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    },
+                    "400": {
+                        "description": "Bad Request"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/cards/save": {
+            "post": {
+                "tags": [
+                    "Cards"
+                ],
+                "summary": "Save card after Stripe setup intent",
+                "description": "Saves a card to the authenticated borrower using a Stripe SetupIntent",
+                "operationId": "8995b19d0615571a266f7e2d050c35c0",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "setup_intent_id"
+                                ],
+                                "properties": {
+                                    "setup_intent_id": {
+                                        "type": "string",
+                                        "example": "seti_1Sma3LJPyplrmPSHabc123"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Card saved successfully"
+                    },
+                    "400": {
+                        "description": "Invalid request"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/cards/charge-card": {
+            "post": {
+                "tags": [
+                    "Cards"
+                ],
+                "summary": "Debit card and credit wallet",
+                "description": "Charges a saved card using Stripe and credits the user's wallet",
+                "operationId": "ba0ccfb3d77ef9710f7e860168983880",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "wallet_id",
+                                    "payment_method_id",
+                                    "amount"
+                                ],
+                                "properties": {
+                                    "wallet_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "payment_method_id": {
+                                        "type": "string",
+                                        "example": "pm_1Sma3LJPyplrmPSHxyz"
+                                    },
+                                    "amount": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 50
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Wallet credited successfully"
+                    },
+                    "400": {
+                        "description": "Bad request"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "500": {
+                        "description": "Payment failed"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/cards/{card_id}": {
+            "delete": {
+                "tags": [
+                    "Cards"
+                ],
+                "summary": "Remove a saved card",
+                "description": "Detaches a saved card from Stripe and removes it from the user's account",
+                "operationId": "0ae161ae235984214521f82ed181ad6f",
+                "parameters": [
+                    {
+                        "name": "card_id",
+                        "in": "path",
+                        "description": "Card ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Card removed successfully"
+                    },
+                    "404": {
+                        "description": "Card not found"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/wallets": {
             "get": {
                 "tags": [
@@ -2478,6 +2721,10 @@
         {
             "name": "Treasury",
             "description": "Treasury"
+        },
+        {
+            "name": "Cards",
+            "description": "Cards"
         }
     ]
 }
