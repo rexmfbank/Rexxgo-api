@@ -6,6 +6,7 @@ use App\Models\SavingsTransaction;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Throwable;
 
@@ -70,6 +71,83 @@ class BridgeService
                 $message .= ' ' . $response->body();
             }
             throw new \RuntimeException($message);
+        }
+
+        return $response->json();
+    }
+
+
+    /**
+     * Create a Bridge KYC Link.
+     *
+     * Expected $data keys (flat or nested are accepted):
+     * - full_name
+     * - email
+     * - type (e.g., 'individual' or 'business')
+     * - idempotency_key (optional)
+     *
+     * @param array $data
+     * @return array Response body from Bridge
+     * @throws \RuntimeException on non-2xx response or network failure
+     */
+    public function updateUserKyc(Request $request, $borrower): ?array
+    {
+        /*
+        |--------------------------------------------------------------------------
+        | Only allow Bridge-supported fields
+        |--------------------------------------------------------------------------
+        */
+        $payload = $request->only([
+            'first_name',
+            'middle_name',
+            'last_name',
+            'transliterated_first_name',
+            'transliterated_middle_name',
+            'transliterated_last_name',
+            'email',
+            'phone',
+            'birth_date',
+            'nationality',
+            'employment_status',
+            'most_recent_occupation',
+            'account_purpose',
+            'account_purpose_other',
+            'expected_monthly_payments_usd',
+            'acting_as_intermediary',
+            'source_of_funds',
+            'endorsements',
+            'residential_address',
+            'transliterated_residential_address',
+            'identifying_information',
+            'documents',
+            'verified_govid_at',
+            'verified_selfie_at',
+            'completed_customer_safety_check_at',
+        ]);
+
+        if (empty($payload)) {
+            throw new \RuntimeException('No valid KYC fields provided');
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Call Bridge Update Customer API
+        |--------------------------------------------------------------------------
+        */
+        $baseUrl = rtrim(env('BRIDGE_BASE_URL', 'https://api.bridge.xyz'), '/');
+        $apiKey = env('BRIDGE_API_KEY');
+
+        $response = Http::withHeaders([
+            'Api-Key' => $apiKey,
+            'Idempotency-Key' => (string) Str::uuid(),
+            'Content-Type' => 'application/json',
+        ])->put(
+            $baseUrl . "/v0/customers/{$borrower->bridge_customer_id}",
+            $payload
+        );
+
+        if (!$response->successful()) {
+            throw new \RuntimeException('Bridge KYC update failed');
         }
 
         return $response->json();
@@ -277,9 +355,9 @@ class BridgeService
 
     public function Transfer(string $customerId, $reference, array $source, array $destination, float $amount)
     {
-        if(env("APP_ENV") == "local"){
+        if (env("APP_ENV") == "local") {
             Log::info("same old pain (:");
-            $generatePayload =$this->getBridgeResponse($amount, $destination, $reference, "pending");
+            $generatePayload = $this->getBridgeResponse($amount, $destination, $reference, "pending");
             Log::info($generatePayload);
             return $generatePayload;
         }

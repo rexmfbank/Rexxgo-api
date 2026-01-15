@@ -455,6 +455,82 @@ public function getLoginActivities(Request $request)
 
 
     /**
+     * @OA\Post(
+     *     path="/api/profile/kyc-update",
+     *     tags={"Profile"},
+     *     summary="Update KYC information",
+     *     description="Update borrower KYC details on Bridge. Supports partial updates.",
+     *     security={{"bearerAuth":{}}},
+     *
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             example={
+     *                 "first_name": "John",
+     *                 "last_name": "Doe",
+     *                 "employment_status": "employed",
+     *                 "account_purpose": "personal_savings",
+     *                 "expected_monthly_payments_usd": "0_4999",
+     *                 "residential_address": {
+     *                     "street_line_1": "12 Adeola Odeku",
+     *                     "city": "Lagos",
+     *                     "country": "NG",
+     *                     "postal_code": "100001"
+     *                 }
+     *             }
+     *         )
+     *     ),
+     *
+     *     @OA\Response(
+     *         response=200,
+     *         description="KYC updated successfully"
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="Validation error"
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="Unauthorized"
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Bridge API error"
+     *     )
+     * )
+     */
+    public function kycUpdate(Request $request)
+    {
+        $borrower = auth()->guard('borrower')->user();
+
+        if (!$borrower->bridge_customer_id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Bridge customer not found'
+            ], 400);
+        }
+
+        $response = $this->bridgeService->updateUserKyc($request, $borrower);
+
+        /*
+        |--------------------------------------------------------------------------
+        | Optional: update local KYC status
+        |--------------------------------------------------------------------------
+        */
+        if (isset($response['state'])) {
+            $borrower->update([
+                'kyc_status' => $response['state']
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'KYC updated successfully',
+            'data' => $borrower
+        ]);
+    }
+
+    /**
      * Sends a POST request to QoreID to verify BVN and name.
      *
      * @param string $bvn The BVN.

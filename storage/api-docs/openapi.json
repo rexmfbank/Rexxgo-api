@@ -1249,6 +1249,56 @@
                 ]
             }
         },
+        "/api/profile/kyc-update": {
+            "post": {
+                "tags": [
+                    "Profile"
+                ],
+                "summary": "Update KYC information",
+                "description": "Update borrower KYC details on Bridge. Supports partial updates.",
+                "operationId": "668ef67cd96bd04a43ddf44543f2bde4",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {},
+                            "example": {
+                                "first_name": "John",
+                                "last_name": "Doe",
+                                "employment_status": "employed",
+                                "account_purpose": "personal_savings",
+                                "expected_monthly_payments_usd": "0_4999",
+                                "residential_address": {
+                                    "street_line_1": "12 Adeola Odeku",
+                                    "city": "Lagos",
+                                    "country": "NG",
+                                    "postal_code": "100001"
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "KYC updated successfully"
+                    },
+                    "400": {
+                        "description": "Validation error"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    },
+                    "500": {
+                        "description": "Bridge API error"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/profile/kyc-status": {
             "get": {
                 "tags": [
