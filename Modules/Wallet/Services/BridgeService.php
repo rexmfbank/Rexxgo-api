@@ -139,7 +139,6 @@ class BridgeService
 
         $response = Http::withHeaders([
             'Api-Key' => $apiKey,
-            'Idempotency-Key' => (string) Str::uuid(),
             'Content-Type' => 'application/json',
         ])->put(
             $baseUrl . "/v0/customers/{$borrower->bridge_customer_id}",
@@ -147,7 +146,19 @@ class BridgeService
         );
 
         if (!$response->successful()) {
-            throw new \RuntimeException('Bridge KYC update failed');
+            Log::error('Bridge KYC update error: ' . $response->body());
+            $body = $response->json();
+            Log::info($body);
+            $message = $body['message'] ?? 'Something went wrong';
+
+            if (isset($body['source']['key']) && is_array($body['source']['key'])) {
+                foreach ($body['source']['key'] as $key => $msg) {
+                    $message = "{$key}: {$msg}";
+                    break;
+                }
+            }
+            
+            throw new \RuntimeException($message);
         }
 
         return $response->json();
