@@ -510,7 +510,8 @@ public function getLoginActivities(Request $request)
             ], 400);
         }
 
-        $response = $this->bridgeService->updateUserKyc($request, $borrower);
+        try {
+            $response = $this->bridgeService->updateUserKyc($request, $borrower);
 
         /*
         |--------------------------------------------------------------------------
@@ -528,6 +529,19 @@ public function getLoginActivities(Request $request)
             'message' => 'KYC updated successfully',
             'data' => $borrower
         ]);
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 400);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Server Error: ' . $e->getMessage(),
+            ], 500);
+        }
+
+        
     }
 
     /**
