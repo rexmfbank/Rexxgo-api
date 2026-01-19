@@ -146,6 +146,7 @@ class BridgeService
         );
 
         if (!$response->successful()) {
+            Log::error('Bridge KYC reques body: ' . $payload);
             Log::error('Bridge KYC update error: ' . $response->body());
             $body = $response->json();
             Log::info($body);
