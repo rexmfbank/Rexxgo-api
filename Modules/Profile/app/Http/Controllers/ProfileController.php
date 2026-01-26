@@ -512,7 +512,7 @@ public function getLoginActivities(Request $request)
 
         try {
             $response = $this->bridgeService->updateUserKyc($request, $borrower);
-
+            Log::info('Bridge KYC update response: ' . json_encode($response));
         /*
         |--------------------------------------------------------------------------
         | Optional: update local KYC status
@@ -535,6 +535,7 @@ public function getLoginActivities(Request $request)
                 'message' => $e->getMessage(),
             ], 400);
         } catch (\Throwable $e) {
+            Log::error($e);
             return response()->json([
                 'success' => false,
                 'message' => 'Server Error: ' . $e->getMessage(),

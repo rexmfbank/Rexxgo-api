@@ -128,7 +128,8 @@ class BridgeService
         if (empty($payload)) {
             throw new \RuntimeException('No valid KYC fields provided');
         }
-
+        Log::info("kyc payload");
+        Log::info($payload);
         /*
         |--------------------------------------------------------------------------
         | Call Bridge Update Customer API
@@ -146,10 +147,8 @@ class BridgeService
         );
 
         if (!$response->successful()) {
-            Log::error('Bridge KYC reques body: ' . $payload);
             Log::error('Bridge KYC update error: ' . $response->body());
             $body = $response->json();
-            Log::info($body);
             $message = $body['message'] ?? 'Something went wrong';
 
             if (isset($body['source']['key']) && is_array($body['source']['key'])) {
