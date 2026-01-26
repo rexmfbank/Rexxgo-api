@@ -506,6 +506,27 @@ class BridgeService
         return $body;
     }
 
+    public function occupationList()
+    {
+        $baseUrl = rtrim(env('BRIDGE_BASE_URL', 'https://api.bridge.xyz/'), '/');
+        $apiKey = env('BRIDGE_API_KEY');
+
+        $url = "{$baseUrl}/v0/lists/occupation_codes";
+
+        $response = Http::withHeaders([
+            'Api-Key' => $apiKey
+        ])->get($url);
+
+        $body = $response->json();
+        Log::info("Bridge Get Customer Response:", $body ?? []);
+
+        if ($response->failed()) {
+            throw new \RuntimeException($body['message'] ?? "Bridge service error");
+        }
+
+        return $body;
+    }
+
 
     private function getBridgeResponse($amount, $destination, $clientReference = "", $status = "pending")
     {

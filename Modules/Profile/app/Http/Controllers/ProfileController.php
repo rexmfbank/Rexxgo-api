@@ -5,6 +5,7 @@ namespace Modules\Profile\app\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Mail\GenericMail;
 use App\Models\Borrower;
+use App\Models\Occupation;
 use App\Models\Savings;
 use App\Models\SavingsProduct;
 use App\Traits\ApiResponse;
@@ -454,6 +455,10 @@ public function getLoginActivities(Request $request)
     }
 
 
+
+
+
+
     /**
      * @OA\Post(
      *     path="/api/profile/kyc-update",
@@ -544,6 +549,33 @@ public function getLoginActivities(Request $request)
 
         
     }
+
+
+    /**
+     * @OA\Get(
+     *   path="/api/profile/occupation/list",
+     *   tags={"Profile"},
+     *   summary="Get Occupation List",
+     *   @OA\Response(response=200, description="Get occupation list"),
+     *   @OA\Response(response=400, description="Validation error"),
+     *   @OA\Response(response=401, description="Unauthorized")
+     * )
+     */
+    public function occupationList(Request $request)
+    {
+        $occuption = Occupation::all();
+        if($occuption->count() == 0){
+            $occuption = $this->bridgeService->occupationList();
+            foreach ($occuption as $occ) {
+                Occupation::create([
+                    "display_name" => $occ['display_name'],
+                    "code" => $occ['code']
+                ]);
+            }
+        }
+        return $this->success($occuption);
+    }
+
 
     /**
      * Sends a POST request to QoreID to verify BVN and name.

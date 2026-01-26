@@ -1299,6 +1299,26 @@
                 ]
             }
         },
+        "/api/profile/occupation/list": {
+            "get": {
+                "tags": [
+                    "Profile"
+                ],
+                "summary": "Get Occupation List",
+                "operationId": "8dc66bbca74f86d0be1316eb91f288a9",
+                "responses": {
+                    "200": {
+                        "description": "Get occupation list"
+                    },
+                    "400": {
+                        "description": "Validation error"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                }
+            }
+        },
         "/api/profile/kyc-status": {
             "get": {
                 "tags": [
