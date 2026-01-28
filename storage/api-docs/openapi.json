@@ -1319,6 +1319,38 @@
                 }
             }
         },
+        "/api/profile/countries/subdivision": {
+            "get": {
+                "tags": [
+                    "Profile"
+                ],
+                "summary": "Get Sub division List",
+                "operationId": "0a80053da848f9af64713feb81babfda",
+                "parameters": [
+                    {
+                        "name": "country_code",
+                        "in": "query",
+                        "description": "Country code (NGA, USA)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "NGA"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Get subdivision list"
+                    },
+                    "400": {
+                        "description": "Validation error"
+                    },
+                    "401": {
+                        "description": "Unauthorized"
+                    }
+                }
+            }
+        },
         "/api/profile/kyc-status": {
             "get": {
                 "tags": [

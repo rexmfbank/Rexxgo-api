@@ -33,3 +33,4 @@ Route::middleware(['auth:borrower', 'throttle:10,1'])->group(function () {
     });
 });
 Route::get('/profile/occupation/list', [ProfileController::class, 'occupationList'])->name('profile.occupationList');
+Route::get('/profile/countries/subdivision', [ProfileController::class, 'subDivisionList'])->name('profile.subDivisionList');

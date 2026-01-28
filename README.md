@@ -85,4 +85,6 @@ php artisan migrate --path=database/migrations/2025_12_14_215418_add_timezone_to
 php artisan migrate --path=database/migrations/2026_01_09_004849_add_stripe_to_borrowers_table.php
 php artisan migrate --path=database/migrations/2026_01_09_011921_create_cards_table.php
 php artisan migrate --path=database/migrations/2026_01_26_214414_create_occupations_table.php
+php artisan migrate --path=database/migrations/2026_01_28_035757_create_sub_divisions_table.php
+
 RCP_513uain9bva28q6

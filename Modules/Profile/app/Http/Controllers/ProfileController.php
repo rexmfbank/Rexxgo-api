@@ -8,6 +8,7 @@ use App\Models\Borrower;
 use App\Models\Occupation;
 use App\Models\Savings;
 use App\Models\SavingsProduct;
+use App\Models\SubDivision;
 use App\Traits\ApiResponse;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -574,6 +575,52 @@ public function getLoginActivities(Request $request)
             }
         }
         return $this->success($occuption);
+    }
+
+
+
+    /**
+     * @OA\Get(
+     *   path="/api/profile/countries/subdivision",
+     *   tags={"Profile"},
+     *   summary="Get Sub division List",
+     *   @OA\Parameter(
+     *     name="country_code",
+     *     in="query",
+     *     required=true,
+     *     description="Country code (NGA, USA)",
+     *     @OA\Schema(type="string", example="NGA")
+     *   ),
+     *   @OA\Response(response=200, description="Get subdivision list"),
+     *   @OA\Response(response=400, description="Validation error"),
+     *   @OA\Response(response=401, description="Unauthorized")
+     * )
+     */
+    public function subDivisionList(Request $request)
+    {
+        $request->validate([
+            'country_code' => 'required|in:NGA,USA'
+        ]);
+        $subdivisions = SubDivision::all();
+        
+        $response = [];
+        if($subdivisions->count() == 0){
+            $subdivisionList = $this->bridgeService->getCountries();
+            foreach ($subdivisionList["data"] as $div) {
+                SubDivision::create([
+                    "country_name" => $div['name'],
+                    "country_code" => $div['alpha3'],
+                    "sub_division" => json_encode($div['subdivisions'], JSON_UNESCAPED_UNICODE)
+                ]);
+            }
+        }
+
+        $subdivisions = SubDivision::where("country_code", $request['country_code'])->first();
+        if($subdivisions == null){
+            return $this->success([]);
+        }
+
+        return $this->success(json_decode($subdivisions['sub_division']));
     }
 
 
